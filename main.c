@@ -202,61 +202,6 @@ void manager_accept_booking() {
     printf(RED_COLOR "Booking not found or already processed.\n" RESET_COLOR);
 }
 
-void customer_search_by_location() {
-    char province[50];
-    getchar();
-    printf(GREEN_COLOR "Enter province to search for houses: " RESET_COLOR);
-    fgets(province, sizeof(province), stdin);
-    province[strcspn(province, "\n")] = 0;
-    int found = 0;
-    for (int i = 0; i < house_count; i++) {
-        if (strcmp(houses[i].province, province) == 0 && houses[i].is_available == 1) {
-            printf(GREEN_COLOR "Found House - Code: %s, Name: %s, Price: %.2f, Rating: %.1f\n" RESET_COLOR,
-                   houses[i].code, houses[i].name, houses[i].price, houses[i].rating);
-            found = 1;
-        }
-    }
-    if (!found) {
-        printf(RED_COLOR "No available houses found in this province.\n" RESET_COLOR);
-    }
-}
-
-void customer_make_booking() {
-    if (house_count == 0) {
-        printf(RED_COLOR "No houses available to book.\n" RESET_COLOR);
-        return;
-    }
-
-    char house_code[10];
-    getchar();
-    printf(GREEN_COLOR "Enter House Code to book: " RESET_COLOR);
-    fgets(house_code, sizeof(house_code), stdin);
-    house_code[strcspn(house_code, "\n")] = 0;
-
-    int found = 0;
-    for (int i = 0; i < house_count; i++) {
-        if (strcmp(houses[i].code, house_code) == 0 && houses[i].is_available == 1) {
-            found = 1;
-
-            Booking new_booking;
-            new_booking.id = booking_count + 1;
-            strcpy(new_booking.house_code, house_code);
-            printf(GREEN_COLOR "Enter your Customer ID: " RESET_COLOR);
-            scanf("%d", &new_booking.customer_id);
-            printf(GREEN_COLOR "Enter booking date (day month year): " RESET_COLOR);
-            scanf("%d %d %d", &new_booking.date.day, &new_booking.date.month, &new_booking.date.year);
-            strcpy(new_booking.status, "Pending");
-            bookings[booking_count++] = new_booking;
-            printf(GREEN_COLOR "Booking request sent! Waiting for manager approval.\n" RESET_COLOR);
-            return;
-        }
-    }
-
-    if (!found) {
-        printf(RED_COLOR "House not available for booking.\n" RESET_COLOR);
-    }
-}
-
 void show_title() {
     printf("\n%s--------------------------------------------------\n", BLUE_COLOR);
     printf("              HOUSE BOOKING SYSTEM                \n");
@@ -286,7 +231,7 @@ void manager_menu() {
             case 2: /* Edit House */ break;
             case 3: /* Delete House */ break;
             case 4: /* Set Availability */ break;
-            case 5: /* View All Houses */ break;
+            case 5: manager_view_all_houses(); break;
             case 6: /* View Bookings For a House */ break;
             case 7: /* Accept/Reject Booking */ break;
             case 0: return;
