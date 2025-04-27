@@ -248,9 +248,89 @@ void customer_search_by_location() {
     printf("%sFunction: Search\n" RESET_COLOR);
 }
 
-void customer_filter_by_price() {
-    printf("%sFunction: Filter\n" RESET_COLOR);
+void customer_filter_advanced() {
+    clear_screen();
+    if (house_count == 0) {
+        printf(RED_COLOR "No houses available!\n" RESET_COLOR);
+        printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
+        getchar();
+        getchar();
+        return;
+    }
+
+    char province[50];
+    float min_price, max_price;
+    float min_rating, max_rating;
+    int min_bedrooms;
+
+    getchar(); // flush
+    printf(GREEN_COLOR "Enter province to search (leave blank to skip): " RESET_COLOR);
+    fgets(province, sizeof(province), stdin);
+    province[strcspn(province, "\n")] = 0; // Remove newline
+
+    printf(GREEN_COLOR "Enter minimum price (or 0 to skip): " RESET_COLOR);
+    scanf("%f", &min_price);
+    printf(GREEN_COLOR "Enter maximum price (or 0 to skip): " RESET_COLOR);
+    scanf("%f", &max_price);
+
+    printf(GREEN_COLOR "Enter minimum rating (or 0 to skip): " RESET_COLOR);
+    scanf("%f", &min_rating);
+    printf(GREEN_COLOR "Enter maximum rating (or 0 to skip): " RESET_COLOR);
+    scanf("%f", &max_rating);
+
+    printf(GREEN_COLOR "Enter minimum bedrooms (or 0 to skip): " RESET_COLOR);
+    scanf("%d", &min_bedrooms);
+
+    int found = 0;
+    printf(BLUE_COLOR "\n========================\n");
+    printf("     FILTERED RESULTS    \n");
+    printf("========================\n" RESET_COLOR);
+
+    for (int i = 0; i < house_count; i++) {
+        if (!houses[i].is_available) continue; // Only available houses
+
+        // Province check
+        if (strlen(province) > 0 && strstr(houses[i].province, province) == NULL)
+            continue;
+
+        // Price check
+        if ((min_price > 0 && houses[i].price < min_price) ||
+            (max_price > 0 && houses[i].price > max_price))
+            continue;
+
+        // Rating check
+        if ((min_rating > 0 && houses[i].rating < min_rating) ||
+            (max_rating > 0 && houses[i].rating > max_rating))
+            continue;
+
+        // Bedrooms check
+        if (min_bedrooms > 0 && houses[i].bedrooms < min_bedrooms)
+            continue;
+
+        // If passed all checks, print
+        printf(YELLOW_COLOR "\nHouse #%d\n" RESET_COLOR, i + 1);
+        printf(WHITE_COLOR "Code: " RESET_COLOR "%s\n", houses[i].code);
+        printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
+        printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
+        printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
+        printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", houses[i].rating);
+        printf(WHITE_COLOR "Bedrooms: " RESET_COLOR "%d\n", houses[i].bedrooms);
+        printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
+        printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
+        printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
+
+        found = 1;
+    }
+
+    if (!found) {
+        printf(RED_COLOR "\nNo houses match your criteria.\n" RESET_COLOR);
+    }
+
+    printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
+    getchar();
+    getchar(); // Pause before return
 }
+
 
 void customer_make_booking() {
     printf("%sFunction: Booking\n" RESET_COLOR);
@@ -265,17 +345,15 @@ void customer_menu() {
         printf("--------------------------------------------------\n" RESET_COLOR);
         printf("1. View All Houses\n");
         printf("2. Search House\n");
-        printf("3. Filter Houses by Price\n");
-        printf("4. Make Booking\n");
+        printf("3. Make Booking\n");
         printf("0. Back\n");
         printf("Choose: ");
         scanf("%d", &choice);
 
         switch (choice) {
             case 1: customer_view_all_houses(); break;
-            case 2: customer_search_by_location(); break;
-            case 3: customer_filter_by_price(); break;
-            case 4: customer_make_booking(); break;
+            case 2: customer_filter_advanced(); break;
+            case 3: customer_make_booking(); break;
             case 0: return;
             default: printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
         }
