@@ -75,14 +75,6 @@ int property_count = 0;
 int house_count = 0;
 int booking_count = 0;
 
-
-
-
-
-
-
-
-//save the information to csv
 void save_houses_to_csv(const char *Briefly_Info) {
     FILE *file = fopen(Briefly_Info, "w");
     if (!file) {
@@ -587,11 +579,6 @@ void customer_filter_advanced() {
     getchar(); // Pause before return
 }
 
-
-void customer_make_booking() {
-    printf("%sFunction: Booking\n" RESET_COLOR);
-}
-
 void customer_menu() {
     int choice;
     while (1) {
@@ -609,7 +596,7 @@ void customer_menu() {
         switch (choice) {
             case 1: customer_view_all_houses(); break;
             case 2: customer_filter_advanced(); break;
-            case 3: customer_make_booking(); break;
+            case 3: //customer_make_booking(); break;
             case 0: return;
             default: printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
         }
