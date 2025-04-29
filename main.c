@@ -320,7 +320,44 @@ void manager_menu() {
     }
 }
 
-void customer_make_booking(const char *house_code) {
+void customer_booking_page(const char *house_code) {
+    clear_screen();
+
+    // Find the house from code
+    House *selected_house = NULL;
+    for (int i = 0; i < house_count; i++) {
+        if (strcmp(houses[i].code, house_code) == 0) {
+            selected_house = &houses[i];
+            break;
+        }
+    }
+
+    if (selected_house == NULL) {
+        printf(RED_COLOR "House not found!\n" RESET_COLOR);
+        printf(YELLOW_COLOR "\nPress Enter to return..." RESET_COLOR);
+        while (getchar() != '\n');
+        getchar();
+        return;
+    }
+
+    printf(BLUE_COLOR "========================\n");
+    printf("         BOOKING PAGE     \n");
+    printf("========================\n" RESET_COLOR);
+
+    printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", selected_house->name);
+    printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", selected_house->province);
+    printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", selected_house->price);
+    printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", selected_house->rating);
+    printf(WHITE_COLOR "Bedrooms: " RESET_COLOR "%d\n", selected_house->bedrooms);
+    printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", selected_house->beds);
+    printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", selected_house->bathrooms);
+    printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", selected_house->kitchens);
+    printf(WHITE_COLOR "Available: " RESET_COLOR "%s\n",
+           selected_house->is_available ? GREEN_COLOR "Yes" RESET_COLOR : RED_COLOR "No" RESET_COLOR);
+
+    printf("\n%sPlease enter your booking details:\n" YELLOW_COLOR);
+    printf("----------------------------------\n" RESET_COLOR);
+
     Booking new_booking;
     new_booking.id = booking_count + 1;
     strcpy(new_booking.house_code, house_code);
@@ -335,8 +372,12 @@ void customer_make_booking(const char *house_code) {
 
     bookings[booking_count++] = new_booking;
 
-    printf(GREEN_COLOR "Booking request submitted!\n" RESET_COLOR);
-    getchar(); getchar();  // Pause
+    printf(GREEN_COLOR "\nBooking request submitted successfully!\n" RESET_COLOR);
+
+    // Flush and pause
+    while (getchar() != '\n');
+    printf(YELLOW_COLOR "Press Enter to return to menu..." RESET_COLOR);
+    getchar();
 }
 
 void customer_view_favorite_houses() {
@@ -377,7 +418,6 @@ void customer_view_favorite_houses() {
 
     for (int i = 0; i < fav_count; i++) {
         printf(YELLOW_COLOR "\nFavorite #%d\n" RESET_COLOR, i + 1);
-        printf(WHITE_COLOR "Code: " RESET_COLOR "%s\n", fav_houses[i].code);
         printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", fav_houses[i].name);
         printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", fav_houses[i].province);
         printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", fav_houses[i].price);
@@ -401,7 +441,7 @@ void customer_view_favorite_houses() {
     }
 
     // Proceed to booking this favorite house
-    //customer_make_booking_from_fav(fav_houses[selection - 1]);
+    customer_booking_page(fav_houses[selection - 1].code);
 }
 
 void customer_view_house_details(int house_index) {
@@ -413,7 +453,6 @@ void customer_view_house_details(int house_index) {
     printf("       HOUSE DETAILS     \n");
     printf("========================\n" RESET_COLOR);
 
-    printf(WHITE_COLOR "Code: " RESET_COLOR "%s\n", h.code);
     printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", h.name);
     printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", h.province);
     printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", h.price);
@@ -439,7 +478,7 @@ void customer_view_house_details(int house_index) {
             if (!h.is_available) {
                 printf(RED_COLOR "Sorry, this house is not available for booking.\n" RESET_COLOR);
             } else {
-                //customer_make_hbooking(house_index);
+                customer_booking_page(h.code);
             }
             break;
         case 2:
@@ -464,7 +503,6 @@ void customer_view_all_houses() {
 
         for (int i = 0; i < house_count; i++) {
             printf(YELLOW_COLOR "\nHouse #%d\n" RESET_COLOR, i + 1);
-            printf(WHITE_COLOR "Code: " RESET_COLOR "%s\n", houses[i].code);
             printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
             printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
             printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
@@ -588,7 +626,8 @@ void customer_menu() {
         printf("--------------------------------------------------\n" RESET_COLOR);
         printf("1. View All Houses\n");
         printf("2. Search House\n");
-        printf("3. Make Booking\n");
+        printf("3. View Favorite Houses\n");
+        printf("4. Make Booking\n");
         printf("0. Back\n");
         printf("Choose: ");
         scanf("%d", &choice);
@@ -596,7 +635,8 @@ void customer_menu() {
         switch (choice) {
             case 1: customer_view_all_houses(); break;
             case 2: customer_filter_advanced(); break;
-            case 3: //customer_make_booking(); break;
+            case 3: customer_view_favorite_houses(); break;
+            case 4: //customer_make_booking(); break;
             case 0: return;
             default: printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
         }
