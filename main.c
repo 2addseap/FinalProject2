@@ -900,70 +900,6 @@ void customer_booking_page(const char *house_code) {
     getchar();
 }
 
-void customer_view_favorite_houses() {
-    clear_screen();
-
-    FILE *file = fopen("favorites.csv", "r");
-    if (!file) {
-        printf(RED_COLOR "No favorite houses found.\n" RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    char line[256];
-    int fav_count = 0;
-    House fav_houses[20]; // assuming max 20 favorites
-
-    // Optional: Skip header if you add one later
-    // fgets(line, sizeof(line), file);
-
-    while (fgets(line, sizeof(line), file)) {
-        House h;
-        sscanf(line, "%9[^,],%49[^,],%49[^,],%f,%f",
-               h.code, h.name, h.province, &h.price, &h.rating);
-        h.is_available = 1; // assume available by default
-        fav_houses[fav_count++] = h;
-    }
-    fclose(file);
-
-    if (fav_count == 0) {
-        printf(RED_COLOR "No favorite houses found!\n" RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    printf(BLUE_COLOR "========================\n");
-    printf("     FAVORITE HOUSES     \n");
-    printf("========================\n" RESET_COLOR);
-
-    for (int i = 0; i < fav_count; i++) {
-        printf(YELLOW_COLOR "\nFavorite #%d\n" RESET_COLOR, i + 1);
-        printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", fav_houses[i].name);
-        printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", fav_houses[i].province);
-        printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", fav_houses[i].price);
-        printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", fav_houses[i].rating);
-    }
-
-    printf(YELLOW_COLOR "\nEnter the number of the favorite house to book (0 to cancel): " RESET_COLOR);
-    int selection;
-    scanf("%d", &selection);
-
-    if (selection == 0) {
-        printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    if (selection < 1 || selection > fav_count) {
-        printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    // Proceed to booking this favorite house
-    customer_booking_page(fav_houses[selection - 1].code);
-}
-
 void customer_view_house_details(int house_index) {
     clear_screen();
 
@@ -1024,6 +960,89 @@ void customer_view_house_details(int house_index) {
             printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
             getchar(); getchar();  // Pause
     }
+}
+
+void customer_view_favorite_houses() {
+    clear_screen();
+
+    FILE *file = fopen("favorites.csv", "r");
+    if (!file) {
+        printf(RED_COLOR "No favorite houses found.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    char line[256];
+    int fav_count = 0;
+    House fav_houses[20]; // assuming max 20 favorites
+
+    // Optional: Skip header if you add one later
+    // fgets(line, sizeof(line), file);
+
+    while (fgets(line, sizeof(line), file)) {
+        House h;
+        sscanf(line, "%9[^,],%49[^,],%49[^,],%f,%f",
+               h.code, h.name, h.province, &h.price, &h.rating);
+        h.is_available = 1; // assume available by default
+        fav_houses[fav_count++] = h;
+    }
+    fclose(file);
+
+    if (fav_count == 0) {
+        printf(RED_COLOR "No favorite houses found!\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    printf(BLUE_COLOR "========================\n");
+    printf("     FAVORITE HOUSES     \n");
+    printf("========================\n" RESET_COLOR);
+
+    for (int i = 0; i < fav_count; i++) {
+        printf(YELLOW_COLOR "\nFavorite #%d\n" RESET_COLOR, i + 1);
+        printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", fav_houses[i].name);
+        printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", fav_houses[i].province);
+        printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", fav_houses[i].price);
+        printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", fav_houses[i].rating);
+    }
+
+    printf(YELLOW_COLOR "\nEnter the number of the favorite house to book (0 to cancel): " RESET_COLOR);
+    int selection;
+    scanf("%d", &selection);
+
+    if (selection == 0) {
+        printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    if (selection < 1 || selection > fav_count) {
+        printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    // Get selected code
+    char *selected_code = fav_houses[selection - 1].code;
+
+    // Find this house in the global houses[] array
+    int index_in_main = -1;
+    for (int i = 0; i < house_count; i++) {
+        if (strcmp(houses[i].code, selected_code) == 0) {
+            index_in_main = i;
+            break;
+        }
+    }
+
+    if (index_in_main == -1) {
+        printf(RED_COLOR "Error: House %s not found in system data.\n" RESET_COLOR, selected_code);
+        getchar(); getchar();
+        return;
+    }
+
+    // Show the full detail page and run as usual
+    customer_view_house_details(index_in_main);
+
 }
 
 void customer_view_all_houses() {
