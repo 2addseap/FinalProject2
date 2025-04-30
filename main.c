@@ -1087,6 +1087,10 @@ void customer_search_by_location() {
     printf("%sFunction: Search\n" RESET_COLOR);
 }
 
+void to_lowercase_str(char *str) {
+    for (int i = 0; str[i]; i++) str[i] = tolower(str[i]);
+}
+
 void customer_filter_advanced() {
     clear_screen();
     if (house_count == 0) {
@@ -1097,15 +1101,17 @@ void customer_filter_advanced() {
         return;
     }
 
-    char province[50];
+    char province[50], province_input[50];
     float min_price, max_price;
     float min_rating, max_rating;
     int min_bedrooms;
 
     getchar(); // flush
     printf(GREEN_COLOR "Enter province to search (leave blank to skip): " RESET_COLOR);
-    fgets(province, sizeof(province), stdin);
-    province[strcspn(province, "\n")] = 0; // Remove newline
+    fgets(province_input, sizeof(province_input), stdin);
+    province_input[strcspn(province_input, "\n")] = 0;
+    strcpy(province, province_input);
+    to_lowercase_str(province);
 
     printf(GREEN_COLOR "Enter minimum price (or 0 to skip): " RESET_COLOR);
     scanf("%f", &min_price);
@@ -1120,35 +1126,60 @@ void customer_filter_advanced() {
     printf(GREEN_COLOR "Enter minimum bedrooms (or 0 to skip): " RESET_COLOR);
     scanf("%d", &min_bedrooms);
 
-    int found = 0;
+    // Collect matching house indexes
+    int matched_indexes[MAX_HOUSES];
+    int matched_count = 0;
+
+    for (int i = 0; i < house_count; i++) {
+        if (!houses[i].is_available) continue;
+
+        if (strlen(province) > 0) {
+            char house_province[50];
+            strcpy(house_province, houses[i].province);
+            to_lowercase_str(house_province);
+            if (strstr(house_province, province) == NULL)
+                continue;
+        }
+
+        if ((min_price > 0 && houses[i].price < min_price) || (max_price > 0 && houses[i].price > max_price))
+            continue;
+
+        if ((min_rating > 0 && houses[i].rating < min_rating) || (max_rating > 0 && houses[i].rating > max_rating))
+            continue;
+            
+        if (min_bedrooms > 0 && houses[i].bedrooms < min_bedrooms)
+            continue;
+
+        matched_indexes[matched_count++] = i;
+    }
+
+    if (matched_count == 0) {
+        printf(RED_COLOR "\nNo houses match your criteria.\n" RESET_COLOR);
+        printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
+        getchar();
+        getchar();
+        return;
+    }
+
+    // Sort matched indexes by price (ascending)
+    for (int i = 0; i < matched_count - 1; i++) {
+        for (int j = i + 1; j < matched_count; j++) {
+            if (houses[matched_indexes[i]].price > houses[matched_indexes[j]].price) {
+                int temp = matched_indexes[i];
+                matched_indexes[i] = matched_indexes[j];
+                matched_indexes[j] = temp;
+            }
+        }
+    }
+
+    // Show filtered + sorted results
     printf(BLUE_COLOR "\n========================\n");
     printf("     FILTERED RESULTS    \n");
     printf("========================\n" RESET_COLOR);
 
-    for (int i = 0; i < house_count; i++) {
-        if (!houses[i].is_available) continue; // Only available houses
-
-        // Province check
-        if (strlen(province) > 0 && strstr(houses[i].province, province) == NULL)
-            continue;
-
-        // Price check
-        if ((min_price > 0 && houses[i].price < min_price) ||
-            (max_price > 0 && houses[i].price > max_price))
-            continue;
-
-        // Rating check
-        if ((min_rating > 0 && houses[i].rating < min_rating) ||
-            (max_rating > 0 && houses[i].rating > max_rating))
-            continue;
-
-        // Bedrooms check
-        if (min_bedrooms > 0 && houses[i].bedrooms < min_bedrooms)
-            continue;
-
-        // If passed all checks, print
-        printf(YELLOW_COLOR "\nHouse #%d\n" RESET_COLOR, i + 1);
-        printf(WHITE_COLOR "Code: " RESET_COLOR "%s\n", houses[i].code);
+    for (int k = 0; k < matched_count; k++) {
+        int i = matched_indexes[k];
+        printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, k + 1);
         printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
         printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
         printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
@@ -1157,18 +1188,27 @@ void customer_filter_advanced() {
         printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
         printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
         printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
-
-        found = 1;
     }
 
-    if (!found) {
-        printf(RED_COLOR "\nNo houses match your criteria.\n" RESET_COLOR);
+    int selection;
+    printf(YELLOW_COLOR "\nEnter the number of the house to view details (0 to cancel): " RESET_COLOR);
+    scanf("%d", &selection);
+
+    if (selection == 0) {
+        printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
     }
 
-    printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
-    getchar();
-    getchar(); // Pause before return
+    if (selection < 1 || selection > matched_count) {
+        printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    customer_view_house_details(matched_indexes[selection - 1]);
 }
+
 
 void customer_menu() {
     int choice;
