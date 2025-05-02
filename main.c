@@ -70,6 +70,7 @@ typedef struct {
 } Property;
 
 typedef struct {
+    char code[10];
     char id[10];
     char name[100];
     char address[100];
@@ -191,6 +192,7 @@ void load_houses_from_csv(const char *Briefly_Info) {
 }
 
 void load_properties_from_csv(const char *filename) {
+    printf("Im here\n");
     FILE *file = fopen(filename, "r");
     if (!file) {
         printf(RED_COLOR "Failed to open %s\n" RESET_COLOR, filename);
@@ -262,6 +264,8 @@ void load_detailed_houses_from_csv(const char *Detail) {
         return;
     }
 
+    printf(GREEN_COLOR "Loading Detailed Houses...\n" RESET_COLOR); // Debug print
+
     char line[1024];
     fgets(line, sizeof(line), file); // skip header
 
@@ -270,26 +274,41 @@ void load_detailed_houses_from_csv(const char *Detail) {
         char *ptr = line;
         DetailedHouse d;
 
-        strcpy(d.id, parse_csv_field(&ptr));
-        strcpy(d.name, parse_csv_field(&ptr));
-        strcpy(d.address, parse_csv_field(&ptr));
-        strcpy(d.province, parse_csv_field(&ptr));
-        d.price = atof(parse_csv_field(&ptr));
-        d.area = atof(parse_csv_field(&ptr));
-        d.beds = atoi(parse_csv_field(&ptr));
-        d.bedrooms = atoi(parse_csv_field(&ptr));
-        d.bathrooms = atoi(parse_csv_field(&ptr));
-        d.maxGuests = atoi(parse_csv_field(&ptr));
-        strcpy(d.facilities, parse_csv_field(&ptr));
-        strcpy(d.landmark, parse_csv_field(&ptr));
-        strcpy(d.transport, parse_csv_field(&ptr));
-        strcpy(d.essential, parse_csv_field(&ptr));
-        d.rating = atof(parse_csv_field(&ptr));
+        char *fields[16];
+        int i = 0;
+        while (*ptr && i < 16) {
+            fields[i++] = strdup(parse_csv_field(&ptr));
+        }
+
+        if (i < 16) {
+            printf(RED_COLOR "Malformed line (only %d fields): %s\n" RESET_COLOR, i, line);
+            for (int j = 0; j < i; j++) free(fields[j]);
+            continue;
+        }
+        strcpy(d.code, fields[0]);
+        strcpy(d.id, fields[1]);
+        strcpy(d.name, fields[2]);
+        strcpy(d.address, fields[3]);
+        strcpy(d.province, fields[4]);
+        d.price = atof(fields[5]);
+        d.area = atof(fields[6]);
+        d.beds = atoi(fields[7]);
+        d.bedrooms = atoi(fields[8]);
+        d.bathrooms = atoi(fields[9]);
+        d.maxGuests = atoi(fields[10]);
+        strcpy(d.facilities, fields[11]);
+        strcpy(d.landmark, fields[12]);
+        strcpy(d.transport, fields[13]);
+        strcpy(d.essential, fields[14]);
+        d.rating = atof(fields[15]);
+
+        for (int j = 0; j < 16; j++) free(fields[j]);  // Clean up
 
         details[detail_count++] = d;
     }
 
     fclose(file);
+    //printf(GREEN_COLOR "Detailed houses loaded successfully: %d items\n" RESET_COLOR, detail_count);  // Debug print
 }
 
 void append_booking_to_csv(
@@ -841,8 +860,7 @@ void customer_booking_page(const char *house_code) {
     printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", selected_house->price);
     printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", selected_house->rating);
     printf(WHITE_COLOR "Max Guests: " RESET_COLOR "%d\n", selected_detail->maxGuests);
-    printf(WHITE_COLOR "Available: " RESET_COLOR "%s\n",
-           selected_house->is_available ? GREEN_COLOR "Yes" RESET_COLOR : RED_COLOR "No" RESET_COLOR);
+    printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", selected_house->is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
 
     printf("\n%sPlease enter your booking details:\n" RESET_COLOR, YELLOW_COLOR);
     printf("----------------------------------\n");
@@ -917,8 +935,7 @@ void customer_view_house_details(int house_index) {
     printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", h.beds);
     printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", h.bathrooms);
     printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", h.kitchens);
-    printf(WHITE_COLOR "Available: " RESET_COLOR "%s\n",
-           h.is_available ? GREEN_COLOR "Yes" RESET_COLOR : RED_COLOR "No" RESET_COLOR);
+    printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", h.is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
 
     // Embed detail info here:
     for (int i = 0; i < detail_count; i++) {
@@ -1004,6 +1021,7 @@ void customer_view_favorite_houses() {
         printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", fav_houses[i].province);
         printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", fav_houses[i].price);
         printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", fav_houses[i].rating);
+        printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", houses[i].is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
     }
 
     printf(YELLOW_COLOR "\nEnter the number of the favorite house to book (0 to cancel): " RESET_COLOR);
@@ -1059,8 +1077,7 @@ void customer_view_all_houses() {
             printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
             printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
             printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
-            printf(WHITE_COLOR "Available: " RESET_COLOR "%s\n",
-                   houses[i].is_available ? GREEN_COLOR "Yes" RESET_COLOR : RED_COLOR "No" RESET_COLOR);
+            printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", houses[i].is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
         }
     }
 
@@ -1080,7 +1097,7 @@ void customer_view_all_houses() {
         return;
     }
 
-    customer_view_house_details(selection - 1);  // <-- New function here!
+    customer_view_house_details(selection - 1);
 }
 
 void customer_search_by_location() {
@@ -1247,8 +1264,10 @@ void customer_menu() {
 
 void run_system() {
     load_houses_from_csv("Briefly_Info.csv");
+    load_detailed_houses_from_csv("Detail.csv");
+    printf("Now Im going to properties");
     load_properties_from_csv("Detail.csv");
-
+    printf("Loaded all csv file finished");
     int choice;
     while (1) {
         clear_screen();
@@ -1258,7 +1277,7 @@ void run_system() {
         printf("2. Manager\n");
         printf("0. Exit\n");
         printf("Your choice: ");
-
+        
         int result = scanf("%d", &choice);
         if (result != 1) {
             while (getchar() != '\n');
