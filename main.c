@@ -383,17 +383,30 @@ void append_booking_to_csv(
     fclose(file);
 }
 
+int favorite_house(int house_index) {
+    House h = houses[house_index];
 
-
-
-void favorite_house(int house_index) {
-    FILE *file = fopen("favorites.csv", "a"); // Append mode
-    if (!file) {
-        printf(RED_COLOR "Failed to save favorite.\n" RESET_COLOR);
-        return;
+    FILE *check = fopen("favorites.csv", "r");
+    if (check) {
+        char line[256];
+        while (fgets(line, sizeof(line), check)) {
+            char code[10];
+            sscanf(line, "%9[^,]", code);
+            if (strcmp(code, h.code) == 0) {
+                fclose(check);
+                printf(RED_COLOR "This house is already in your favorites list.\n" RESET_COLOR);
+                getchar(); getchar();
+                return 0;  // Already in favorites
+            }
+        }
+        fclose(check);
     }
 
-    House h = houses[house_index];
+    FILE *file = fopen("favorites.csv", "a");
+    if (!file) {
+        printf(RED_COLOR "Failed to save favorite.\n" RESET_COLOR);
+        return 0;
+    }
 
     fprintf(file, "%s,%s,%s,%.2f,%.1f\n",
             h.code, h.name, h.province, h.price, h.rating);
@@ -401,7 +414,8 @@ void favorite_house(int house_index) {
     fclose(file);
 
     printf(GREEN_COLOR "House added to favorites!\n" RESET_COLOR);
-    getchar(); getchar();  // Pause
+    getchar(); getchar();
+    return 1;  // Successfully added
 }
 
 // Add house function
@@ -971,13 +985,38 @@ void customer_booking_page(const char *house_code) {
     time_t checkin_time = mktime(&checkin_tm);
     time_t checkout_time = mktime(&checkout_tm);
 
-    if (checkin_time == -1 || checkout_time == -1 || difftime(checkout_time, checkin_time) <= 0) {
+    while (checkin_time == -1 || checkout_time == -1 || difftime(checkout_time, checkin_time) <= 0) {
         printf(RED_COLOR "Error: Check-out must be after Check-in.\n" RESET_COLOR);
-        printf(YELLOW_COLOR "Press Enter to return...\n" RESET_COLOR);
-        while (getchar() != '\n');
-        getchar();
-        return;
+        printf(YELLOW_COLOR "Please re-enter your check-in and check-out dates.\n" RESET_COLOR);
+    
+        do {
+            printf(GREEN_COLOR "Check-in Date (DD MM YYYY): " RESET_COLOR);
+            scanf("%d %d %d", &checkin.day, &checkin.month, &checkin.year);
+            if (!is_valid_date(checkin.day, checkin.month, checkin.year)) {
+                printf(RED_COLOR "Invalid Check-in Date. Please enter a real date.\n" RESET_COLOR);
+            }
+        } while (!is_valid_date(checkin.day, checkin.month, checkin.year));    
+    
+        do {
+            printf(GREEN_COLOR "Check-out Date (DD MM YYYY): " RESET_COLOR);
+            scanf("%d %d %d", &checkout.day, &checkout.month, &checkout.year);
+            if (!is_valid_date(checkout.day, checkout.month, checkout.year)) {
+                printf(RED_COLOR "Invalid Check-out Date. Please enter a real date.\n" RESET_COLOR);
+            }
+        } while (!is_valid_date(checkout.day, checkout.month, checkout.year));    
+    
+        checkin_tm.tm_mday = checkin.day;
+        checkin_tm.tm_mon = checkin.month - 1;
+        checkin_tm.tm_year = checkin.year - 1900;
+    
+        checkout_tm.tm_mday = checkout.day;
+        checkout_tm.tm_mon = checkout.month - 1;
+        checkout_tm.tm_year = checkout.year - 1900;
+    
+        checkin_time = mktime(&checkin_tm);
+        checkout_time = mktime(&checkout_tm);
     }
+    
 
     nights = (int)(difftime(checkout_time, checkin_time) / (60 * 60 * 24));
     printf(GREEN_COLOR "Number of Nights: " RESET_COLOR "%d\n", nights);
@@ -991,7 +1030,25 @@ void customer_booking_page(const char *house_code) {
     printf(WHITE_COLOR "Number of Nights: " RESET_COLOR "%d\n", nights);
     printf(WHITE_COLOR "Total Price: " RESET_COLOR "%.2f\n", total_price);
 
-    printf(RED_COLOR "\n⚠ Cancellation Notice:\n" RESET_COLOR);
+    float amount_paid = 0.0f;
+    while (1) {
+        printf(GREEN_COLOR "\nEnter amount to pay: " RESET_COLOR);
+        scanf("%f", &amount_paid);
+
+        if (amount_paid < total_price) {
+            printf(RED_COLOR "Insufficient payment! You must pay at least %.2f\n" RESET_COLOR, total_price);
+        } else {
+            float change = amount_paid - total_price;
+        if (change > 0.0f) {
+            printf(GREEN_COLOR "Payment accepted. Your change is: %.2f\n" RESET_COLOR, change);
+        } else {
+            printf(GREEN_COLOR "Payment accepted.\n" RESET_COLOR);
+        }
+            break;
+        }
+    }
+
+    printf(RED_COLOR "\nCancellation Notice:\n" RESET_COLOR);
     printf(YELLOW_COLOR "If you cancel later, only 90%% (%.2f) will be refunded.\n", refund_amount);
     printf("Do you want to confirm the booking? (Y/N): " RESET_COLOR);
 
@@ -1071,6 +1128,9 @@ void customer_view_house_details(int house_index) {
             favorite_house(house_index);
             break;
         case 0:
+            printf(GREEN_COLOR "Press Enter to return to the lists..." RESET_COLOR);
+            while (getchar() != '\n');
+            getchar();
             return;
         default:
             printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
@@ -1116,14 +1176,13 @@ void customer_view_favorite_houses() {
 
     char line[256];
     int fav_count = 0;
-    House fav_houses[20]; // assuming max 20 favorites
+    House fav_houses[20];
 
-    
     while (fgets(line, sizeof(line), file)) {
         House h;
         sscanf(line, "%9[^,],%49[^,],%49[^,],%f,%f",
                h.code, h.name, h.province, &h.price, &h.rating);
-        h.is_available = 1; // assume available
+        h.is_available = 1;
         fav_houses[fav_count++] = h;
     }
     fclose(file);
@@ -1146,7 +1205,6 @@ void customer_view_favorite_houses() {
         printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", fav_houses[i].rating);
     }
 
-
     int selection;
     printf(YELLOW_COLOR "\nEnter the number of the favorite house (0 to cancel): " RESET_COLOR);
     scanf("%d", &selection);
@@ -1163,22 +1221,27 @@ void customer_view_favorite_houses() {
         return;
     }
 
-    // Ask what to do
     printf(YELLOW_COLOR "\n1. Book this house\n2. Remove from favorites\n0. Cancel\n" RESET_COLOR);
     printf("Your choice: ");
     int action;
     scanf("%d", &action);
 
     if (action == 0) {
-        printf(GREEN_COLOR "No action taken.\n" RESET_COLOR);
+        printf(GREEN_COLOR "Press Enter to continue.\n" RESET_COLOR);
         getchar(); getchar();
         return;
     }
 
-    char *selected_code = fav_houses[selection - 1].code;
+    if (action == 2) {
+        remove_favorite_by_index(selection - 1);
+        printf(GREEN_COLOR "House removed from favorites.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
 
-    // Book house
     if (action == 1) {
+        char *selected_code = fav_houses[selection - 1].code;
+
         int index_in_main = -1;
         for (int i = 0; i < house_count; i++) {
             if (strcmp(houses[i].code, selected_code) == 0) {
@@ -1191,21 +1254,13 @@ void customer_view_favorite_houses() {
             printf(RED_COLOR "Error: House %s not found in system.\n" RESET_COLOR, selected_code);
         } else {
             customer_view_house_details(index_in_main);
+            customer_view_favorite_houses();
         }
+        return;
     }
 
-    // Remove from favorites
-    else if (action == 2) {
-        remove_favorite_by_index(selection - 1);
-        printf(GREEN_COLOR "House removed from favorites.\n" RESET_COLOR);
-        getchar(); getchar();
-
-    }
-
-    else {
-        printf(RED_COLOR "Invalid action.\n" RESET_COLOR);
-        getchar(); getchar();
-    }
+    printf(RED_COLOR "Invalid action.\n" RESET_COLOR);
+    getchar(); getchar();
 }
 
 void customer_view_all_houses() {
@@ -1248,6 +1303,7 @@ void customer_view_all_houses() {
     }
 
     customer_view_house_details(selection - 1);
+    customer_view_all_houses();
 }
 
 void customer_search_by_location() {
