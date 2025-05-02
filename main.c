@@ -98,6 +98,10 @@ int property_count = 0;
 int house_count = 0;
 int booking_count = 0;
 
+void load_properties_from_csv(const char *filename);
+void load_houses_for_customer(const char *filename);
+
+
 void save_houses_to_csv(const char *filename) {
     FILE *file = fopen(filename, "w");
     if (!file) {
@@ -145,7 +149,8 @@ void save_properties_to_csv(const char *filename) {
     fclose(file);
 }
 
-void load_houses_from_csv(const char *Briefly_Info) {
+void load_houses_for_customer(const char *Briefly_Info)
+ {
     //printf("Loading from CSV file: %s\n", Briefly_Info);
     FILE *file = fopen(Briefly_Info, "r");
     if (!file) {
@@ -189,6 +194,38 @@ void load_houses_from_csv(const char *Briefly_Info) {
     }
 
     fclose(file);
+}
+
+void load_houses_for_manager() {
+    // Load houses from Briefly_Info.csv
+    FILE *file = fopen("Briefly_Info.csv", "r");
+    if (!file) {
+        printf(RED_COLOR "Failed to open Briefly_Info.csv\n" RESET_COLOR);
+        return;
+    }
+
+    char line[512];
+    fgets(line, sizeof(line), file); // skip header
+    house_count = 0;
+
+    while (fgets(line, sizeof(line), file) && house_count < MAX_HOUSES) {
+        House h;
+        int fields = sscanf(line, "%9[^,],%49[^,],%49[^,],%f,%f,%d,%d,%d,%d,%d",
+            h.code, h.name, h.province,
+            &h.price, &h.rating,
+            &h.bedrooms, &h.beds, &h.bathrooms, &h.kitchens, &h.is_available);
+
+        if (fields == 10) {
+            houses[house_count++] = h;
+        } else {
+            printf(RED_COLOR "Warning: Skipped malformed line in Briefly_Info.csv\n" RESET_COLOR);
+        }
+    }
+
+    fclose(file);
+
+    // Also load property details
+    load_properties_from_csv("Detail.csv");
 }
 
 void load_properties_from_csv(const char *filename) {
@@ -1286,8 +1323,16 @@ void run_system() {
         }
 
         switch (choice) {
-            case 1: customer_menu(); break;
-            case 2: manager_menu(); break;
+            case 1:
+                load_houses_for_customer("Briefly_Info.csv");  // ✅ correct
+                load_detailed_houses_from_csv("Detail.csv");
+                customer_menu();
+                break;
+
+            case 2:
+                load_houses_for_manager();
+                manager_menu();
+                break;
             case 0:
                 save_houses_to_csv("Briefly_Info.csv");
                 save_properties_to_csv("Detail.csv");
@@ -1298,6 +1343,7 @@ void run_system() {
         }
     }
 }
+
 
 int main() {
     run_system();
