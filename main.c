@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 
 // Define ANSI escape codes for colors
 #define RESET_COLOR "\033[0m"
@@ -859,6 +860,20 @@ void manager_menu() {
     }
 }
 
+int is_leap_year(int year) {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+int is_valid_date(int day, int month, int year) {
+    if (year < 2024 || month < 1 || month > 12 || day < 1)
+        return 0;
+
+    int days_in_month[] = { 31, (is_leap_year(year) ? 29 : 28), 31, 30, 31, 30,
+                            31, 31, 30, 31, 30, 31 };
+
+    return day <= days_in_month[month - 1];
+}
+
 void customer_booking_page(const char *house_code) {
     clear_screen();
 
@@ -897,7 +912,7 @@ void customer_booking_page(const char *house_code) {
     printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", selected_house->price);
     printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", selected_house->rating);
     printf(WHITE_COLOR "Max Guests: " RESET_COLOR "%d\n", selected_detail->maxGuests);
-    printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", selected_house->is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
+    //printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", selected_house->is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
 
     printf("\n%sPlease enter your booking details:\n" RESET_COLOR, YELLOW_COLOR);
     printf("----------------------------------\n");
@@ -926,20 +941,75 @@ void customer_booking_page(const char *house_code) {
         }
     } while (guests <= 0 || guests > selected_detail->maxGuests);
 
-    printf(GREEN_COLOR "Check-in Date (DD MM YYYY): " RESET_COLOR);
-    scanf("%d %d %d", &checkin.day, &checkin.month, &checkin.year);
+    do {
+        printf(GREEN_COLOR "Check-in Date (DD MM YYYY): " RESET_COLOR);
+        scanf("%d %d %d", &checkin.day, &checkin.month, &checkin.year);
+    
+        if (!is_valid_date(checkin.day, checkin.month, checkin.year)) {
+            printf(RED_COLOR "Invalid Check-in Date. Please enter a real date.\n" RESET_COLOR);
+        }
+    } while (!is_valid_date(checkin.day, checkin.month, checkin.year));    
 
-    printf(GREEN_COLOR "Check-out Date (DD MM YYYY): " RESET_COLOR);
-    scanf("%d %d %d", &checkout.day, &checkout.month, &checkout.year);
+    do {
+        printf(GREEN_COLOR "Check-out Date (DD MM YYYY): " RESET_COLOR);
+        scanf("%d %d %d", &checkout.day, &checkout.month, &checkout.year);
+    
+        if (!is_valid_date(checkout.day, checkout.month, checkout.year)) {
+            printf(RED_COLOR "Invalid Check-out Date. Please enter a real date.\n" RESET_COLOR);
+        }
+    } while (!is_valid_date(checkout.day, checkout.month, checkout.year));    
 
-    printf(GREEN_COLOR "Number of Nights: " RESET_COLOR);
-    scanf("%d", &nights);
+    struct tm checkin_tm = {0}, checkout_tm = {0};
+    checkin_tm.tm_mday = checkin.day;
+    checkin_tm.tm_mon = checkin.month - 1;
+    checkin_tm.tm_year = checkin.year - 1900;
 
-    // Store to Booking array
+    checkout_tm.tm_mday = checkout.day;
+    checkout_tm.tm_mon = checkout.month - 1;
+    checkout_tm.tm_year = checkout.year - 1900;
+
+    time_t checkin_time = mktime(&checkin_tm);
+    time_t checkout_time = mktime(&checkout_tm);
+
+    if (checkin_time == -1 || checkout_time == -1 || difftime(checkout_time, checkin_time) <= 0) {
+        printf(RED_COLOR "Error: Check-out must be after Check-in.\n" RESET_COLOR);
+        printf(YELLOW_COLOR "Press Enter to return...\n" RESET_COLOR);
+        while (getchar() != '\n');
+        getchar();
+        return;
+    }
+
+    nights = (int)(difftime(checkout_time, checkin_time) / (60 * 60 * 24));
+    printf(GREEN_COLOR "Number of Nights: " RESET_COLOR "%d\n", nights);
+
+    // Transaction summary
+    float total_price = nights * selected_house->price;
+    float refund_amount = total_price * 0.9;
+
+    printf(GREEN_COLOR "\n==== TRANSACTION SUMMARY ====\n" RESET_COLOR);
+    printf(WHITE_COLOR "Price per Night: " RESET_COLOR "%.2f\n", selected_house->price);
+    printf(WHITE_COLOR "Number of Nights: " RESET_COLOR "%d\n", nights);
+    printf(WHITE_COLOR "Total Price: " RESET_COLOR "%.2f\n", total_price);
+
+    printf(RED_COLOR "\n⚠ Cancellation Notice:\n" RESET_COLOR);
+    printf(YELLOW_COLOR "If you cancel later, only 90%% (%.2f) will be refunded.\n", refund_amount);
+    printf("Do you want to confirm the booking? (Y/N): " RESET_COLOR);
+
+    char confirm;
+    getchar();  // flush newline
+    scanf("%c", &confirm);
+    if (tolower(confirm) != 'y') {
+        printf(RED_COLOR "\nBooking cancelled by user.\n" RESET_COLOR);
+        printf(YELLOW_COLOR "Press Enter to return to menu..." RESET_COLOR);
+        while (getchar() != '\n');
+        getchar();
+        return;
+    }
+
     Booking new_booking;
     new_booking.id = booking_count + 1;
     strcpy(new_booking.house_code, house_code);
-    new_booking.customer_id = guests;  // temporary use
+    new_booking.customer_id = guests;
     new_booking.date = checkin;
     strcpy(new_booking.status, "Pending");
 
@@ -973,8 +1043,6 @@ void customer_view_house_details(int house_index) {
     printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", h.beds);
     printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", h.bathrooms);
     printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", h.kitchens);
-    printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", h.is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
-    printf(WHITE_COLOR "Address: " RESET_COLOR "%s\n", d.address);
     printf(WHITE_COLOR "Area: " RESET_COLOR "%.2f sqm\n", d.area);
     printf(WHITE_COLOR "Max Guests: " RESET_COLOR "%d\n", d.maxGuests);
     printf(WHITE_COLOR "Facilities: " RESET_COLOR "%s\n", d.facilities);
@@ -1052,7 +1120,6 @@ void customer_view_favorite_houses() {
         printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", fav_houses[i].province);
         printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", fav_houses[i].price);
         printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", fav_houses[i].rating);
-        printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", houses[i].is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
     }
 
     printf(YELLOW_COLOR "\nEnter the number of the favorite house to book (0 to cancel): " RESET_COLOR);
@@ -1114,7 +1181,6 @@ void customer_view_all_houses() {
             printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
             printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
             printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
-            printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", houses[i].is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
         }
     }
 
@@ -1250,7 +1316,6 @@ void customer_filter_advanced() {
         printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
         printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
         printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
-        printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", houses[i].is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
     }
 
     int selection;
