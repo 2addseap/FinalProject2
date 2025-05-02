@@ -255,7 +255,7 @@ void load_properties_from_csv(const char *filename) {
             p.is_available = 1;  // Default available
             properties[property_count++] = p;
         } else {
-            printf(RED_COLOR "Warning: Skipped malformed line in Detail.csv\n" RESET_COLOR);
+            //printf(RED_COLOR "Warning: Skipped malformed line in Detail.csv\n" RESET_COLOR);
         }
     }
 
@@ -301,7 +301,7 @@ void load_detailed_houses_from_csv(const char *Detail) {
         return;
     }
 
-    printf(GREEN_COLOR "Loading Detailed Houses...\n" RESET_COLOR); // Debug print
+    //printf(GREEN_COLOR "Loading Detailed Houses...\n" RESET_COLOR); // Debug print
 
     char line[1024];
     fgets(line, sizeof(line), file); // skip header
@@ -318,7 +318,7 @@ void load_detailed_houses_from_csv(const char *Detail) {
         }
 
         if (i < 16) {
-            printf(RED_COLOR "Malformed line (only %d fields): %s\n" RESET_COLOR, i, line);
+            //printf(RED_COLOR "Malformed line (only %d fields): %s\n" RESET_COLOR, i, line);
             for (int j = 0; j < i; j++) free(fields[j]);
             continue;
         }
@@ -874,7 +874,7 @@ void customer_booking_page(const char *house_code) {
     }
 
     for (int i = 0; i < detail_count; i++) {
-        if (strcmp(details[i].id, house_code) == 0) {
+        if (strcmp(details[i].code, house_code) == 0) {
             selected_detail = &details[i];
             break;
         }
@@ -959,6 +959,7 @@ void customer_view_house_details(int house_index) {
     clear_screen();
 
     House h = houses[house_index];
+    DetailedHouse d = details[house_index];
 
     printf(BLUE_COLOR "========================\n");
     printf("       HOUSE DETAILS     \n");
@@ -973,20 +974,13 @@ void customer_view_house_details(int house_index) {
     printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", h.bathrooms);
     printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", h.kitchens);
     printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", h.is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
-
-    // Embed detail info here:
-    for (int i = 0; i < detail_count; i++) {
-        if (strcmp(details[i].id, h.code) == 0) {
-            printf(WHITE_COLOR "Address: " RESET_COLOR "%s\n", details[i].address);
-            printf(WHITE_COLOR "Area: " RESET_COLOR "%.2f sqm\n", details[i].area);
-            printf(WHITE_COLOR "Max Guests: " RESET_COLOR "%d\n", details[i].maxGuests);
-            printf(WHITE_COLOR "Facilities: " RESET_COLOR "%s\n", details[i].facilities);
-            printf(WHITE_COLOR "Landmark: " RESET_COLOR "%s\n", details[i].landmark);
-            printf(WHITE_COLOR "Transport: " RESET_COLOR "%s\n", details[i].transport);
-            printf(WHITE_COLOR "Essential Info: " RESET_COLOR "%s\n", details[i].essential);
-            break;
-        }
-    }
+    printf(WHITE_COLOR "Address: " RESET_COLOR "%s\n", d.address);
+    printf(WHITE_COLOR "Area: " RESET_COLOR "%.2f sqm\n", d.area);
+    printf(WHITE_COLOR "Max Guests: " RESET_COLOR "%d\n", d.maxGuests);
+    printf(WHITE_COLOR "Facilities: " RESET_COLOR "%s\n", d.facilities);
+    printf(WHITE_COLOR "Landmark: " RESET_COLOR "%s\n", d.landmark);
+    printf(WHITE_COLOR "Transport: " RESET_COLOR "%s\n", d.transport);
+    printf(WHITE_COLOR "Essential Info: " RESET_COLOR "%s\n", d.essential);
 
     printf("\n%sWhat would you like to do?\n", YELLOW_COLOR);
     printf("1. Book this House\n");
@@ -1110,10 +1104,16 @@ void customer_view_all_houses() {
         printf("========================\n" RESET_COLOR);
 
         for (int i = 0; i < house_count; i++) {
-            printf(YELLOW_COLOR "\nHouse #%d\n" RESET_COLOR, i + 1);
+            //int i = house_count;
+            printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, i + 1);
             printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
             printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
             printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
+            printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", houses[i].rating);
+            printf(WHITE_COLOR "Bedrooms: " RESET_COLOR "%d\n", houses[i].bedrooms);
+            printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
+            printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
+            printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
             printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", houses[i].is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
         }
     }
@@ -1300,7 +1300,7 @@ void customer_menu() {
 }
 
 void run_system() {
-    load_houses_from_csv("Briefly_Info.csv");
+    //load_houses_from_csv("Briefly_Info.csv");
     load_detailed_houses_from_csv("Detail.csv");
     printf("Now Im going to properties");
     load_properties_from_csv("Detail.csv");
