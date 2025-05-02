@@ -1272,6 +1272,128 @@ void customer_filter_advanced() {
     customer_view_house_details(matched_indexes[selection - 1]);
 }
 
+void customer_my_booking() {
+    clear_screen();
+
+    FILE *file = fopen("Booking_history.csv", "r");
+    if (!file) {
+        printf(RED_COLOR "Could not open booking history.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    char line[512], name_input[100];
+    getchar(); // flush newline
+    printf(GREEN_COLOR "Enter your full name to check your booking: " RESET_COLOR);
+    fgets(name_input, sizeof(name_input), stdin);
+    name_input[strcspn(name_input, "\n")] = 0;
+
+    // Store matched bookings in arrays
+    char bookings[50][512];
+    int booking_count = 0;
+
+    fgets(line, sizeof(line), file); // Skip header
+
+    while (fgets(line, sizeof(line), file)) {
+        char fullname[100];
+        sscanf(line, "\"%[^\"]", fullname);
+
+        if (strcmp(fullname, name_input) == 0) {
+            strcpy(bookings[booking_count++], line);
+        }
+    }
+
+    fclose(file);
+
+    if (booking_count == 0) {
+        printf(RED_COLOR "\nNo booking found for \"%s\".\n" RESET_COLOR, name_input);
+        printf(YELLOW_COLOR "\nPress Enter to return..." RESET_COLOR);
+        getchar();
+        return;
+    }
+
+    printf(BLUE_COLOR "\n========================\n");
+    printf("     YOUR BOOKINGS       \n");
+    printf("========================\n" RESET_COLOR);
+
+    for (int i = 0; i < booking_count; i++) {
+        char fullname[100], phone[20], checkin[20], checkout[20];
+        int guests, nights;
+        char code[10], housename[100], province[50];
+        float price, rating;
+
+        sscanf(bookings[i], "\"%[^\"]\",\"%[^\"]\",%d,%[^,],%[^,],%d,%[^,],\"%[^\"]\",\"%[^\"]\",%f,%f",
+               fullname, phone, &guests,
+               checkin, checkout, &nights,
+               code, housename, province,
+               &price, &rating);
+
+        printf(YELLOW_COLOR "\nBooking #%d\n" RESET_COLOR, i + 1);
+        printf(WHITE_COLOR "Phone: " RESET_COLOR "%s\n", phone);
+        printf(WHITE_COLOR "Guests: " RESET_COLOR "%d\n", guests);
+        printf(WHITE_COLOR "Check-in: " RESET_COLOR "%s\n", checkin);
+        printf(WHITE_COLOR "Check-out: " RESET_COLOR "%s\n", checkout);
+        printf(WHITE_COLOR "Nights: " RESET_COLOR "%d\n", nights);
+        printf(WHITE_COLOR "House: " RESET_COLOR "%s (%s)\n", housename, province);
+        printf(WHITE_COLOR "Price/Night: " RESET_COLOR "%.2f\n", price);
+        printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", rating);
+    }
+
+    int choice;
+    printf(YELLOW_COLOR "\nEnter booking number to cancel (0 to skip): " RESET_COLOR);
+    scanf("%d", &choice);
+
+    if (choice == 0) {
+        printf(GREEN_COLOR "No cancellation performed.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    if (choice < 1 || choice > booking_count) {
+        printf(RED_COLOR "Invalid selection.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    // Parse and refund
+    char fullname[100], phone[20], checkin[20], checkout[20];
+    int guests, nights;
+    char code[10], housename[100], province[50];
+    float price, rating;
+
+    sscanf(bookings[choice - 1], "\"%[^\"]\",\"%[^\"]\",%d,%[^,],%[^,],%d,%[^,],\"%[^\"]\",\"%[^\"]\",%f,%f",
+           fullname, phone, &guests,
+           checkin, checkout, &nights,
+           code, housename, province,
+           &price, &rating);
+
+    float total = price * nights;
+    float refund = total * 0.9f;
+
+    printf(GREEN_COLOR "\nBooking cancelled successfully!\n" RESET_COLOR);
+    printf(WHITE_COLOR "Total Paid: " RESET_COLOR "%.2f\n", total);
+    printf(WHITE_COLOR "Refund (90%%): " RESET_COLOR "%.2f\n", refund);
+
+    // Save to Cancelled_bookings.csv
+    FILE *cancel_file = fopen("Cancelled_bookings.csv", "a");
+    if (!cancel_file) {
+        printf(RED_COLOR "Failed to record cancellation.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    // Add header if file is empty
+    fseek(cancel_file, 0, SEEK_END);
+    if (ftell(cancel_file) == 0) {
+        fprintf(cancel_file, "Fullname,Phone,Guests,CheckIn,CheckOut,Nights,Code,Name,Province,Price,Rating,Refund\n");
+    }
+
+    fprintf(cancel_file, "%s,%.2f\n", bookings[choice - 1], refund);
+    fclose(cancel_file);
+
+    printf(YELLOW_COLOR "\nCancellation recorded. Press Enter to return..." RESET_COLOR);
+    getchar(); getchar();
+}
 
 void customer_menu() {
     int choice;
@@ -1283,7 +1405,7 @@ void customer_menu() {
         printf("1. View All Houses\n");
         printf("2. Search House\n");
         printf("3. View Favorite Houses\n");
-        printf("4. Make Booking\n");
+        printf("4. My Booking\n");
         printf("0. Back\n");
         printf("Choose: ");
         scanf("%d", &choice);
@@ -1292,7 +1414,7 @@ void customer_menu() {
             case 1: customer_view_all_houses(); break;
             case 2: customer_filter_advanced(); break;
             case 3: customer_view_favorite_houses(); break;
-            case 4: //customer_make_booking(); break;
+            case 4: customer_my_booking(); break;
             case 0: return;
             default: printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
         }
