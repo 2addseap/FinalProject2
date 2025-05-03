@@ -110,14 +110,30 @@ int property_count = 0;
 int house_count = 0;
 int booking_count = 0;
 
+
 void load_properties_from_csv(const char *filename);
 void load_houses_for_customer(const char *filename);
 void load_calendar(const char *filename);
 void manager_set_availability();
 void generate_calendar_for_new_house(const char *house_code, int days_ahead);
 int parse_date(const char *date_str, struct tm *tm_out);
+char *parse_csv_field(char **line_ptr);
+//void display_calendar_grid(const char *house_code, int month, int year);
 
+void flush_input() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
 
+void to_lowercase(char *str) {
+    for (int i = 0; str[i]; i++)
+        str[i] = tolower(str[i]);
+}
+
+void to_uppercase(char *str) {
+    for (int i = 0; str[i]; i++)
+        str[i] = toupper((unsigned char)str[i]);
+}
 
 //load data from calendar.csv
 void load_calendar(const char *filename) {
@@ -177,18 +193,19 @@ void save_properties_to_csv(const char *filename) {
 
     for (int i = 0; i < property_count; i++) {
         Property p = properties[i];
-        fprintf(file, "%s,%d,%s,%s,%s,%.2f,%.2f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
-            properties[i].code, properties[i].id, properties[i].name, properties[i].address, properties[i].province,
-            properties[i].price, properties[i].area, properties[i].beds, properties[i].bedrooms,
-            properties[i].bathrooms, properties[i].max_guests,
-            properties[i].facilities, properties[i].landmark,
-            properties[i].transportation, properties[i].essential,
-            properties[i].rating);
-        
+        fprintf(file, "\"%s\",%d,\"%s\",\"%s\",\"%s\",%.2f,%.2f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
+            p.code, p.id, p.name, p.address, p.province,
+            p.price, p.area, p.beds, p.bedrooms,
+            p.bathrooms, p.max_guests,
+            p.facilities, p.landmark,
+            p.transportation, p.essential,
+            p.rating);
     }
 
     fclose(file);
+    printf(GREEN_COLOR "Properties saved to Detail.csv\n" RESET_COLOR);
 }
+
 
 void load_houses_for_customer(const char *Briefly_Info)
  {
@@ -245,30 +262,51 @@ void load_properties_from_csv(const char *filename) {
     }
 
     char line[1024];
-    fgets(line, sizeof(line), file);  // Skip header line
+    fgets(line, sizeof(line), file);  // skip header
 
     property_count = 0;
-    while (fgets(line, sizeof(line), file)) {
+    while (fgets(line, sizeof(line), file) && property_count < 100) {
+        char *ptr = line;
         Property p;
 
-        // Corrected: Now Code is the first field!
-        int fields_read = sscanf(line, "%9[^,],%d,%49[^,],%99[^,],%29[^,],%f,%f,%d,%d,%d,%d,\"%149[^\"]\",\"%99[^\"]\",\"%99[^\"]\",\"%99[^\"]\",%f",
-            p.code, &p.id, p.name, p.address, p.province,
-            &p.price, &p.area,
-            &p.beds, &p.bedrooms, &p.bathrooms, &p.max_guests,
-            p.facilities, p.landmark, p.transportation, p.essential,
-            &p.rating);
-
-        if (fields_read == 16) {  // Now expect 16 fields
-            p.is_available = 1;  // Default available
-            properties[property_count++] = p;
-        } else {
-            //printf(RED_COLOR "Warning: Skipped malformed line in Detail.csv\n" RESET_COLOR);
+        char *fields[16];
+        int i = 0;
+        while (*ptr && i < 16) {
+            fields[i++] = strdup(parse_csv_field(&ptr));
         }
+
+        if (i < 16) {
+            for (int j = 0; j < i; j++) free(fields[j]);
+            continue;
+        }
+
+        strcpy(p.code, fields[0]);
+        p.id = atoi(fields[1]);
+        strcpy(p.name, fields[2]);
+        strcpy(p.address, fields[3]);
+        strcpy(p.province, fields[4]);
+        p.price = atof(fields[5]);
+        p.area = atof(fields[6]);
+        p.beds = atoi(fields[7]);
+        p.bedrooms = atoi(fields[8]);
+        p.bathrooms = atoi(fields[9]);
+        p.max_guests = atoi(fields[10]);
+        strcpy(p.facilities, fields[11]);
+        strcpy(p.landmark, fields[12]);
+        strcpy(p.transportation, fields[13]);
+        strcpy(p.essential, fields[14]);
+        p.rating = atof(fields[15]);
+        p.is_available = 1;
+
+        for (int j = 0; j < 16; j++) free(fields[j]);
+
+        to_uppercase(p.code);
+        properties[property_count++] = p;
     }
 
     fclose(file);
 }
+
 
 void load_houses_for_manager() {
     // Load houses from Briefly_Info.csv
@@ -487,14 +525,22 @@ int favorite_house(int house_index) {
 
 // Add house function
 
-void to_lowercase(char *str) {
-    for (int i = 0; str[i]; i++)
-        str[i] = tolower(str[i]);
-}
+// void to_lowercase(char *str) {
+//     for (int i = 0; str[i]; i++)
+//         str[i] = tolower(str[i]);
+// }
+
+// void to_uppercase(char *str) {
+//     for (int i = 0; str[i]; i++)
+//         str[i] = toupper((unsigned char)str[i]);
+// }
 
 void manager_add_house() {
+    clear_screen();  // Ensure fresh screen when entering
+
     if (property_count >= 100 || house_count >= 100) {
         printf(RED_COLOR "Cannot add more houses. Maximum limit reached.\n" RESET_COLOR);
+        flush_input();
         return;
     }
 
@@ -502,7 +548,7 @@ void manager_add_house() {
     new_property.id = property_count + 1;
 
     printf(GREEN_COLOR "\nEnter house name: " RESET_COLOR);
-    getchar();  // flush newline
+    flush_input();  // Clear leftover input
     fgets(new_property.name, sizeof(new_property.name), stdin);
     new_property.name[strcspn(new_property.name, "\n")] = 0;
 
@@ -514,12 +560,10 @@ void manager_add_house() {
     fgets(new_property.province, sizeof(new_property.province), stdin);
     new_property.province[strcspn(new_property.province, "\n")] = 0;
 
-    // Normalize province to lowercase for matching
     char province_lower[50];
     strcpy(province_lower, new_property.province);
     to_lowercase(province_lower);
 
-    // Fix display casing for province
     if (strcmp(province_lower, "huahin/cha-am") == 0)
         strcpy(new_property.province, "Huahin/Cha-am");
     else if (strcmp(province_lower, "pattaya") == 0)
@@ -531,22 +575,27 @@ void manager_add_house() {
 
     printf(GREEN_COLOR "Enter price: " RESET_COLOR);
     scanf("%f", &new_property.price);
+    flush_input();
 
     printf(GREEN_COLOR "Enter area (sqm): " RESET_COLOR);
     scanf("%f", &new_property.area);
+    flush_input();
 
     printf(GREEN_COLOR "Enter number of beds: " RESET_COLOR);
     scanf("%d", &new_property.beds);
+    flush_input();
 
     printf(GREEN_COLOR "Enter number of bedrooms: " RESET_COLOR);
     scanf("%d", &new_property.bedrooms);
+    flush_input();
 
     printf(GREEN_COLOR "Enter number of bathrooms: " RESET_COLOR);
     scanf("%d", &new_property.bathrooms);
+    flush_input();
 
     printf(GREEN_COLOR "Enter max number of guests: " RESET_COLOR);
     scanf("%d", &new_property.max_guests);
-    getchar();
+    flush_input();
 
     printf(GREEN_COLOR "Enter facilities: " RESET_COLOR);
     fgets(new_property.facilities, sizeof(new_property.facilities), stdin);
@@ -567,17 +616,15 @@ void manager_add_house() {
     while (1) {
         printf(GREEN_COLOR "Enter rating (1.0 - 10.0): " RESET_COLOR);
         int result = scanf("%f", &new_property.rating);
-        while (getchar() != '\n'); // flush the input buffer
-    
+        flush_input();
+
         if (result == 1 && new_property.rating >= 1.0 && new_property.rating <= 10.0) {
             break;
         } else {
             printf(RED_COLOR "Invalid. Please enter a number between 1.0 and 10.0.\n" RESET_COLOR);
         }
     }
-    
 
-    // Determine prefix for house code
     char prefix[4];
     if (strcmp(province_lower, "huahin/cha-am") == 0)
         strcpy(prefix, "HH");
@@ -586,7 +633,7 @@ void manager_add_house() {
     else if (strcmp(province_lower, "kanchanaburi") == 0)
         strcpy(prefix, "K");
     else
-        strcpy(prefix, "U"); // Unknown fallback
+        strcpy(prefix, "U");
 
     int max_suffix = -1;
     for (int i = 0; i < house_count; i++) {
@@ -612,12 +659,10 @@ void manager_add_house() {
     new_house.is_available = 1;
     houses[house_count++] = new_house;
 
-    // Save code to property too
     strcpy(new_property.code, new_house.code);
     new_property.is_available = 1;
     properties[property_count++] = new_property;
 
-    // === Append to Detail.csv ===
     FILE *detailFile = fopen("Detail.csv", "a");
     if (detailFile) {
         fprintf(detailFile, "%s,%d,%s,%s,%s,%.0f,%.0f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
@@ -627,11 +672,8 @@ void manager_add_house() {
             new_property.facilities, new_property.landmark, new_property.transportation,
             new_property.essential, new_property.rating);
         fclose(detailFile);
-    } else {
-        printf(RED_COLOR "Failed to open Detail.csv!\n" RESET_COLOR);
     }
 
-    // === Append to Briefly_Info.csv ===
     FILE *briefFile = fopen("Briefly_Info.csv", "a");
     if (briefFile) {
         fprintf(briefFile, "%s,%s,%s,%.0f,%.1f,%d,%d,%d,%d,%d\n",
@@ -640,18 +682,33 @@ void manager_add_house() {
             new_house.beds, new_house.bathrooms, new_house.kitchens,
             new_house.is_available);
         fclose(briefFile);
-    } else {
-        printf(RED_COLOR "Failed to open Briefly_Info.csv!\n" RESET_COLOR);
     }
 
-    // ✅ Generate calendar for next 30 days
     generate_calendar_for_new_house(new_house.code, 30);
 
     printf(BLUE_COLOR "\nHouse successfully added with code: %s\n" RESET_COLOR, new_house.code);
-    getchar(); // pause
+    printf(YELLOW_COLOR "\nPress Enter to return to Manager Menu..." RESET_COLOR);
+    getchar();  // Wait for Enter
+    clear_screen();  // ✅ Clear before returning
 }
 
 // Edit house function
+
+void trim_whitespace(char *str) {
+    char *end;
+
+    // Trim leading space
+    while (isspace((unsigned char)*str)) str++;
+
+    if (*str == 0) return;  // All spaces
+
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end)) end--;
+
+    // Write new null terminator
+    *(end + 1) = '\0';
+}
 
 void manager_edit_house() {
     char target_code[10];
@@ -659,6 +716,7 @@ void manager_edit_house() {
     getchar(); // flush newline
     fgets(target_code, sizeof(target_code), stdin);
     target_code[strcspn(target_code, "\n")] = 0;
+    to_uppercase(target_code);  // <-- Add this line
 
     int house_index = -1;
     for (int i = 0; i < house_count; i++) {
@@ -675,12 +733,23 @@ void manager_edit_house() {
     }
 
     int property_index = -1;
+    char trimmed_code[10];
+    strcpy(trimmed_code, houses[house_index].code);
+    trim_whitespace(trimmed_code);
+    to_uppercase(trimmed_code);
+
     for (int i = 0; i < property_count; i++) {
-        if (strcmp(properties[i].code, houses[house_index].code) == 0) {
+        char prop_code[10];
+        strcpy(prop_code, properties[i].code);
+        trim_whitespace(prop_code);
+        to_uppercase(prop_code);
+
+        if (strcmp(prop_code, trimmed_code) == 0) {
             property_index = i;
             break;
         }
     }
+
     
 
     if (property_index == -1) {
@@ -860,10 +929,10 @@ void generate_calendar_for_new_house(const char *house_code, int days_ahead) {
     fclose(file);
 }
 
-void to_uppercase(char *str) {
-    for (int i = 0; str[i]; i++)
-        str[i] = toupper((unsigned char)str[i]);
-}
+// void to_uppercase(char *str) {
+//     for (int i = 0; str[i]; i++)
+//         str[i] = toupper((unsigned char)str[i]);
+// }
 
 // Step 1: Function to delete house
 void manager_delete_house() {
@@ -955,15 +1024,97 @@ void manager_delete_house() {
     getchar(); getchar();
 }
 
+const char* month_name(int month) {
+    static const char *names[] = {
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    };
+    return (month >= 1 && month <= 12) ? names[month - 1] : "Unknown";
+}
+
+int is_leap_year(int year) {
+    return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
+}
+
+void display_calendar_grid(const char *house_code, int year, int month) {
+    const char *days[] = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" };
+
+    printf(BLUE_COLOR "\n%s %d - Availability for House %s\n" RESET_COLOR, 
+        month_name(month), year, house_code);
+ 
+
+    // Day-of-week headers
+    for (int i = 0; i < 7; i++) {
+        printf("%-4s", days[i]);
+    }
+    printf("\n");
+
+    // First day of the month
+    struct tm first = {0};
+    first.tm_year = year - 1900;
+    first.tm_mon = month - 1;
+    first.tm_mday = 1;
+    mktime(&first);  // Normalize
+
+    int first_wday = first.tm_wday;
+
+    // Days in month
+    int days_in_month[] = { 31, is_leap_year(year) ? 29 : 28, 31, 30, 31, 30,
+                            31, 31, 30, 31, 30, 31 };
+    int total_days = days_in_month[month - 1];
+
+    // Pad before first date
+    for (int i = 0; i < first_wday; i++) {
+        printf("    ");  // 4 spaces for alignment
+    }
+
+    // Print each day with status
+    for (int day = 1; day <= total_days; day++) {
+        char date_str[20];
+        snprintf(date_str, sizeof(date_str), "%04d-%02d-%02d", year, month, day);
+
+        char status_char = ' ';
+        for (int i = 0; i < calendar_count; i++) {
+            if (strcmp(calendar[i].code, house_code) == 0 &&
+                strcmp(calendar[i].date, date_str) == 0) {
+                if (strcmp(calendar[i].status, "Available") == 0)
+                    status_char = 'A';
+                else if (strcmp(calendar[i].status, "Booked") == 0)
+                    status_char = 'B';
+                else
+                    status_char = 'X';
+                break;
+            }
+        }
+
+        char cell[5];
+        snprintf(cell, sizeof(cell), "%02d%c", day, status_char);
+        printf("%-4s", cell);  // Print in a 4-space-wide column
+
+        if ((first_wday + day) % 7 == 0) {
+            printf("\n");
+        }
+    }
+
+    printf("\n\nLegend:\n");
+    printf(GREEN_COLOR "A = Available\n" RESET_COLOR);
+    printf(RED_COLOR "B = Booked\n" RESET_COLOR);
+    printf("X = Blocked by manager\n");
+
+    printf(YELLOW_COLOR "Press Enter to continue..." RESET_COLOR);
+    getchar(); getchar();
+}
+
+
 
 void manager_set_availability() {
     clear_screen();
+
     char house_code[10];
     printf(GREEN_COLOR "Enter House Code to manage availability (e.g. HH1): " RESET_COLOR);
     scanf("%s", house_code);
-    to_uppercase(house_code);  // Normalize for consistency
+    to_uppercase(house_code);
 
-    // Validate house code
     int found = 0;
     for (int i = 0; i < house_count; i++) {
         if (strcmp(houses[i].code, house_code) == 0) {
@@ -977,121 +1128,68 @@ void manager_set_availability() {
         return;
     }
 
-    int choice;
-    do {
-        clear_screen();
-        printf(BLUE_COLOR "===== SET AVAILABILITY FOR %s =====\n" RESET_COLOR, house_code);
-        printf("1. View Calendar\n");
-        printf("2. Block Date Range\n");
-        printf("3. Unblock Date Range\n");
-        printf("0. Return\n");
-        printf(YELLOW_COLOR "Select an option: " RESET_COLOR);
-        scanf("%d", &choice);
+    int year, month;
+    printf(GREEN_COLOR "Enter month and year to view (MM YYYY): " RESET_COLOR);
+    scanf("%d %d", &month, &year);
 
-        if (choice == 1) {
-            printf(BLUE_COLOR "\nAvailability for %s:\n" RESET_COLOR, house_code);
-            for (int i = 0; i < calendar_count; i++) {
-                if (strcmp(calendar[i].code, house_code) == 0) {
-                    printf("Date: %s - Status: %s\n", calendar[i].date, calendar[i].status);
-                }
-            }
-            printf(YELLOW_COLOR "\nPress Enter to return..." RESET_COLOR);
-            getchar(); getchar();
+    display_calendar_grid(house_code, year, month); 
 
-        } else if (choice == 2 || choice == 3) {
-            char start_date[20], end_date[20];
-            char reason[100] = "BLOCKED";
+    printf(YELLOW_COLOR "\n1. Block a date\n2. Unblock a date\n0. Return\nChoose: " RESET_COLOR);
+    int option;
+    scanf("%d", &option);
 
-            getchar(); // flush
-            printf(GREEN_COLOR "Enter start date (YYYY-MM-DD): " RESET_COLOR);
-            fgets(start_date, sizeof(start_date), stdin);
-            start_date[strcspn(start_date, "\n")] = 0;
+    if (option == 0) return;
 
-            printf(GREEN_COLOR "Enter end date (YYYY-MM-DD): " RESET_COLOR);
-            fgets(end_date, sizeof(end_date), stdin);
-            end_date[strcspn(end_date, "\n")] = 0;
+    int day;
+    printf(GREEN_COLOR "Enter the day to modify (1-31): " RESET_COLOR);
+    scanf("%d", &day);
 
-            if (choice == 2) {
-                printf(GREEN_COLOR "Enter reason (e.g. MAINTENANCE): " RESET_COLOR);
+    if (day < 1 || day > 31) {
+        printf(RED_COLOR "Invalid day!\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    char date_str[20];
+    snprintf(date_str, sizeof(date_str), "%04d-%02d-%02d", year, month, day);
+
+    for (int i = 0; i < calendar_count; i++) {
+        if (strcmp(calendar[i].code, house_code) == 0 &&
+            strcmp(calendar[i].date, date_str) == 0) {
+
+            if (option == 1) {
+                printf(GREEN_COLOR "Enter reason to block (e.g., MAINTENANCE): " RESET_COLOR);
+                char reason[30];
+                getchar(); // flush
                 fgets(reason, sizeof(reason), stdin);
                 reason[strcspn(reason, "\n")] = 0;
-                to_uppercase(reason);  // Normalize reason
-            }
-            else if (choice == 3) {
-                printf(YELLOW_COLOR "Are you sure you want to unblock this whole range? (y/n): " RESET_COLOR);
-                char confirm;
-                scanf(" %c", &confirm);
-                if (tolower(confirm) != 'y') {
-                    printf(RED_COLOR "Unblock canceled.\n" RESET_COLOR);
-                    getchar(); getchar();
-                    continue;
-                }
-            }
-
-            struct tm start_tm = {0}, end_tm = {0};
-            if (!parse_date(start_date, &start_tm) || !parse_date(end_date, &end_tm)) {
-                printf(RED_COLOR "Invalid date format. Please use YYYY-MM-DD.\n" RESET_COLOR);
-                getchar(); getchar();
-                continue;
-            }
-
-            time_t start_time = mktime(&start_tm);
-            time_t end_time = mktime(&end_tm);
-            if (difftime(end_time, start_time) < 0) {
-                printf(RED_COLOR "End date must be after or equal to start date.\n" RESET_COLOR);
-                getchar(); getchar();
-                continue;
-            }
-
-            int modified = 0;
-            for (time_t t = start_time; t <= end_time; t += 86400) {
-                struct tm current_tm = *localtime(&t);
-                char date_str[20];
-                strftime(date_str, sizeof(date_str), "%Y-%m-%d", &current_tm);
-
-                for (int i = 0; i < calendar_count; i++) {
-                    if (strcmp(calendar[i].code, house_code) == 0 && strcmp(calendar[i].date, date_str) == 0) {
-                        if (choice == 2) {
-                            if (strcmp(calendar[i].status, "Booked") == 0) {
-                                printf(RED_COLOR "Cannot block date %s - already booked.\n" RESET_COLOR, date_str);
-                            } else {
-                                strcpy(calendar[i].status, reason);
-                                modified = 1;
-                            }
-                        } else if (choice == 3) {
-                            if (strcmp(calendar[i].status, "Available") == 0) {
-                                printf(YELLOW_COLOR "Date %s is already available.\n" RESET_COLOR, date_str);
-                            } else if (strcmp(calendar[i].status, "Booked") == 0) {
-                                printf(RED_COLOR "Cannot unblock %s - already booked.\n" RESET_COLOR, date_str);
-                            } else {
-                                strcpy(calendar[i].status, "Available");
-                                modified = 1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (modified) {
-                printf(GREEN_COLOR "Saving changes to calendar...\n" RESET_COLOR);
-                FILE *file = fopen("Calendar.csv", "w");
-                if (!file) {
-                    printf(RED_COLOR "Error saving calendar file!\n" RESET_COLOR);
+                to_uppercase(reason);
+                strcpy(calendar[i].status, reason);
+            } else if (option == 2) {
+                if (strcmp(calendar[i].status, "Booked") == 0) {
+                    printf(RED_COLOR "Cannot unblock a booked date.\n" RESET_COLOR);
                 } else {
-                    fprintf(file, "Code,Date,Status\n");
-                    for (int i = 0; i < calendar_count; i++) {
-                        fprintf(file, "%s,%s,%s\n", calendar[i].code, calendar[i].date, calendar[i].status);
-                    }
-                    fclose(file);
-                    printf(GREEN_COLOR "Calendar updated successfully.\n" RESET_COLOR);
+                    strcpy(calendar[i].status, "Available");
                 }
             }
 
-            printf(YELLOW_COLOR "Press Enter to return..." RESET_COLOR);
-            getchar(); getchar();
+            break;
         }
+    }
 
-    } while (choice != 0);
+    // Save updated calendar
+    FILE *file = fopen("Calendar.csv", "w");
+    if (file) {
+        fprintf(file, "Code,Date,Status\n");
+        for (int i = 0; i < calendar_count; i++) {
+            fprintf(file, "%s,%s,%s\n", calendar[i].code, calendar[i].date, calendar[i].status);
+        }
+        fclose(file);
+        printf(GREEN_COLOR "Calendar updated successfully.\n" RESET_COLOR);
+    }
+
+    printf(YELLOW_COLOR "Press Enter to return..." RESET_COLOR);
+    getchar(); getchar();
 }
 
 
@@ -1127,6 +1225,125 @@ void manager_view_all_houses() {
     getchar();
     getchar();  // to pause and wait for user input
 }
+
+char unique_codes[50][10];  // max 50 unique house codes
+int unique_count = 0;
+
+
+void manager_view_bookings_for_house() {
+    clear_screen();
+    FILE *file = fopen("Booking_history.csv", "r");
+    if (!file) {
+        printf(RED_COLOR "Booking history file not found.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    char line[512];
+    fgets(line, sizeof(line), file); // skip header
+
+    char unique_codes[50][10];  // Store up to 50 unique house codes
+    int unique_count = 0;
+
+    // First pass: gather unique house codes
+    while (fgets(line, sizeof(line), file)) {
+        char *token;
+        char code[10];
+
+        // Skip to the house code field (7th field, index 6)
+        int field = 0;
+        token = strtok(line, ",");
+        while (token != NULL && field < 6) {
+            token = strtok(NULL, ",");
+            field++;
+        }
+
+        if (token != NULL) {
+            strcpy(code, token);
+
+            // Remove surrounding quotes if needed
+            if (code[0] == '"') memmove(code, code + 1, strlen(code));
+            if (code[strlen(code) - 1] == '"') code[strlen(code) - 1] = '\0';
+
+            // Add to list if not already present
+            int exists = 0;
+            for (int i = 0; i < unique_count; i++) {
+                if (strcmp(unique_codes[i], code) == 0) {
+                    exists = 1;
+                    break;
+                }
+            }
+            if (!exists && unique_count < 50) {
+                strcpy(unique_codes[unique_count++], code);
+            }
+        }
+    }
+
+    fclose(file);
+
+    if (unique_count == 0) {
+        printf(RED_COLOR "No bookings found.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    // Show list of house codes with bookings
+    printf("\n===============================\n");
+    printf("  Houses with Booking Records  \n");
+    printf("===============================\n");
+    for (int i = 0; i < unique_count; i++) {
+        printf("%d. %s\n", i + 1, unique_codes[i]);
+    }
+
+    // Ask for input
+    char input_code[10];
+    printf("\nEnter house code to view bookings: ");
+    scanf("%s", input_code);
+    to_uppercase(input_code);
+    clear_screen();
+
+    printf("=========================================\n");
+    printf("     Bookings for House Code: %s         \n", input_code);
+    printf("=========================================\n");
+
+    // Show bookings for selected house
+    file = fopen("Booking_history.csv", "r");
+    if (!file) {
+        printf(RED_COLOR "Error reopening booking history.\n" RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
+
+    fgets(line, sizeof(line), file); // skip header
+    int found = 0;
+    while (fgets(line, sizeof(line), file)) {
+        char fullname[100], phone[20], checkin[20], checkout[20], code[10];
+        int guests, nights;
+
+        sscanf(line, "\"%[^\"]\",\"%[^\"]\",%d,%[^,],%[^,],%d,%[^,]",
+               fullname, phone, &guests, checkin, checkout, &nights, code);
+
+        if (strcmp(code, input_code) == 0) {
+            found = 1;
+            printf("- Name: %s\n", fullname);
+            printf("  Phone: %s | Guests: %d\n", phone, guests);
+            printf("  Check-in: %s | Check-out: %s | Nights: %d\n", checkin, checkout, nights);
+            printf("-----------------------------------------\n");
+        }
+    }
+
+    fclose(file);
+
+    if (!found) {
+        printf(RED_COLOR "No bookings found for this house.\n" RESET_COLOR);
+    }
+
+    printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
+    getchar(); getchar();
+}
+
+
+
 
 void manager_accept_booking() {
     if (booking_count == 0) {
@@ -1187,28 +1404,42 @@ void manager_menu() {
         printf("4. Set Availability\n");
         printf("5. View All Houses\n");
         printf("6. View Bookings For a House\n");
-        printf("7. Accept/Reject Booking\n");
         printf("0. Back\n");
         printf("Choose: ");
         scanf("%d", &choice);
 
         switch (choice) {
-            case 1: manager_add_house(); break;
-            case 2: manager_edit_house(); break;
-            case 3: manager_delete_house(); break;
-            case 4: manager_set_availability(); break;
-            case 5: manager_view_all_houses(); break;
-            case 6: /* View Bookings For a House */ break;
-            case 7: /* Accept/Reject Booking */ break;
-            case 0: return;
+            case 1:
+                clear_screen();  
+                manager_add_house();
+                break;
+            case 2: 
+                clear_screen();  
+                manager_edit_house();
+                break;
+            case 3: 
+                clear_screen();  
+                manager_delete_house(); 
+                break;
+            case 4: 
+                clear_screen();  
+                manager_set_availability(); 
+                break;
+            case 5: 
+                clear_screen();  
+                manager_view_all_houses();
+                break;
+            case 6: 
+                clear_screen();  
+                manager_view_bookings_for_house(); 
+                break;
+            case 0: 
+            return;
             default: printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
         }
     }
 }
 
-int is_leap_year(int year) {
-    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-}
 
 int is_valid_date(int day, int month, int year) {
     if (year < 2024 || month < 1 || month > 12 || day < 1)
@@ -1966,6 +2197,7 @@ void run_system() {
                     }
                     if (!found) {
                         generate_calendar_for_new_house(houses[i].code, 30);
+                        load_calendar("Calendar.csv");
                     }
                 }
             
