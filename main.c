@@ -1223,7 +1223,6 @@ int is_valid_date(int day, int month, int year) {
 void customer_booking_page(const char *house_code) {
     clear_screen();
 
-    // Find the house
     House *selected_house = NULL;
     DetailedHouse *selected_detail = NULL;
 
@@ -1249,16 +1248,30 @@ void customer_booking_page(const char *house_code) {
         return;
     }
 
+    time_t now = time(NULL);
+    struct tm *now_tm = localtime(&now);
+    struct tm start_tm = *now_tm;
+    struct tm end_tm = *now_tm;
+    start_tm.tm_mday = 1;
+    end_tm.tm_mday = 1;
+    end_tm.tm_mon += 1;
+    end_tm.tm_sec -= 1;
+    mktime(&end_tm);
+
+    char start_date_str[11], end_date_str[11];
+    strftime(start_date_str, sizeof(start_date_str), "%Y-%m-%d", &start_tm);
+    strftime(end_date_str, sizeof(end_date_str), "%Y-%m-%d", &end_tm);
+
     printf(BLUE_COLOR "========================\n");
     printf("         BOOKING PAGE     \n");
     printf("========================\n" RESET_COLOR);
+    printf("Booking period allowed: %s to %s\n\n", start_date_str, end_date_str);
 
     printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", selected_house->name);
     printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", selected_house->province);
     printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", selected_house->price);
     printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", selected_house->rating);
     printf(WHITE_COLOR "Max Guests: " RESET_COLOR "%d\n", selected_detail->maxGuests);
-    //printf(WHITE_COLOR "Status: " RESET_COLOR "%s\n", selected_house->is_available ? GREEN_COLOR "[Available]" RESET_COLOR : RED_COLOR "[Unavailable]" RESET_COLOR);
 
     printf("\n%sPlease enter your booking details:\n" RESET_COLOR, YELLOW_COLOR);
     printf("----------------------------------\n");
@@ -1267,8 +1280,7 @@ void customer_booking_page(const char *house_code) {
     int guests, nights;
     Date checkin, checkout;
 
-    getchar(); // flush leftover newline
-
+    getchar();
     printf(GREEN_COLOR "Full Name: " RESET_COLOR);
     fgets(full_name, sizeof(full_name), stdin);
     full_name[strcspn(full_name, "\n")] = 0;
@@ -1277,85 +1289,90 @@ void customer_booking_page(const char *house_code) {
     fgets(phone, sizeof(phone), stdin);
     phone[strcspn(phone, "\n")] = 0;
 
-    // Guest validation
     do {
         printf(GREEN_COLOR "Number of Guests: " RESET_COLOR);
         scanf("%d", &guests);
-
-        if (guests <= 0 || guests > selected_detail->maxGuests) {
-            printf(RED_COLOR "Invalid number of guests! Max allowed: %d\n" RESET_COLOR, selected_detail->maxGuests);
-        }
+        if (guests <= 0 || guests > selected_detail->maxGuests)
+            printf(RED_COLOR "Invalid! Max allowed: %d\n" RESET_COLOR, selected_detail->maxGuests);
     } while (guests <= 0 || guests > selected_detail->maxGuests);
 
-    do {
-        printf(GREEN_COLOR "Check-in Date (DD MM YYYY): " RESET_COLOR);
-        scanf("%d %d %d", &checkin.day, &checkin.month, &checkin.year);
-    
-        if (!is_valid_date(checkin.day, checkin.month, checkin.year)) {
-            printf(RED_COLOR "Invalid Check-in Date. Please enter a real date.\n" RESET_COLOR);
-        }
-    } while (!is_valid_date(checkin.day, checkin.month, checkin.year));    
-
-    do {
-        printf(GREEN_COLOR "Check-out Date (DD MM YYYY): " RESET_COLOR);
-        scanf("%d %d %d", &checkout.day, &checkout.month, &checkout.year);
-    
-        if (!is_valid_date(checkout.day, checkout.month, checkout.year)) {
-            printf(RED_COLOR "Invalid Check-out Date. Please enter a real date.\n" RESET_COLOR);
-        }
-    } while (!is_valid_date(checkout.day, checkout.month, checkout.year));    
-
-    struct tm checkin_tm = {0}, checkout_tm = {0};
-    checkin_tm.tm_mday = checkin.day;
-    checkin_tm.tm_mon = checkin.month - 1;
-    checkin_tm.tm_year = checkin.year - 1900;
-
-    checkout_tm.tm_mday = checkout.day;
-    checkout_tm.tm_mon = checkout.month - 1;
-    checkout_tm.tm_year = checkout.year - 1900;
-
-    time_t checkin_time = mktime(&checkin_tm);
-    time_t checkout_time = mktime(&checkout_tm);
-
-    while (checkin_time == -1 || checkout_time == -1 || difftime(checkout_time, checkin_time) <= 0) {
-        printf(RED_COLOR "Error: Check-out must be after Check-in.\n" RESET_COLOR);
-        printf(YELLOW_COLOR "Please re-enter your check-in and check-out dates.\n" RESET_COLOR);
-    
+    struct tm checkin_tm, checkout_tm;
+    time_t checkin_time, checkout_time;
+    while (1) {
         do {
             printf(GREEN_COLOR "Check-in Date (DD MM YYYY): " RESET_COLOR);
             scanf("%d %d %d", &checkin.day, &checkin.month, &checkin.year);
-            if (!is_valid_date(checkin.day, checkin.month, checkin.year)) {
-                printf(RED_COLOR "Invalid Check-in Date. Please enter a real date.\n" RESET_COLOR);
-            }
-        } while (!is_valid_date(checkin.day, checkin.month, checkin.year));    
-    
+        } while (!is_valid_date(checkin.day, checkin.month, checkin.year));
+
         do {
             printf(GREEN_COLOR "Check-out Date (DD MM YYYY): " RESET_COLOR);
             scanf("%d %d %d", &checkout.day, &checkout.month, &checkout.year);
-            if (!is_valid_date(checkout.day, checkout.month, checkout.year)) {
-                printf(RED_COLOR "Invalid Check-out Date. Please enter a real date.\n" RESET_COLOR);
-            }
-        } while (!is_valid_date(checkout.day, checkout.month, checkout.year));    
-    
-        checkin_tm.tm_mday = checkin.day;
-        checkin_tm.tm_mon = checkin.month - 1;
-        checkin_tm.tm_year = checkin.year - 1900;
-    
-        checkout_tm.tm_mday = checkout.day;
-        checkout_tm.tm_mon = checkout.month - 1;
-        checkout_tm.tm_year = checkout.year - 1900;
-    
+        } while (!is_valid_date(checkout.day, checkout.month, checkout.year));
+
+        checkin_tm = (struct tm){.tm_mday = checkin.day, .tm_mon = checkin.month - 1, .tm_year = checkin.year - 1900};
+        checkout_tm = (struct tm){.tm_mday = checkout.day, .tm_mon = checkout.month - 1, .tm_year = checkout.year - 1900};
         checkin_time = mktime(&checkin_tm);
         checkout_time = mktime(&checkout_tm);
+
+        int conflict_found = 0;
+        FILE *book_hist = fopen("Booking_history.csv", "r");
+        if (!book_hist) {
+            printf(RED_COLOR "Failed to open Booking_history.csv\n" RESET_COLOR);
+            return;
+        }
+
+        char line[512];
+        fgets(line, sizeof(line), book_hist);
+        while (fgets(line, sizeof(line), book_hist)) {
+            char bh_name[100], bh_phone[20], bh_checkin[20], bh_checkout[20];
+            int bh_guests, bh_nights;
+            char bh_code[10], bh_house[100], bh_province[50];
+            float bh_price, bh_rating;
+
+            sscanf(line, "\"%[^\"]\",\"%[^\"]\",%d,%[^,],%[^,],%d,%[^,],\"%[^\"]\",\"%[^\"]\",%f,%f",
+                   bh_name, bh_phone, &bh_guests, bh_checkin, bh_checkout, &bh_nights,
+                   bh_code, bh_house, bh_province, &bh_price, &bh_rating);
+
+            if (strcmp(bh_code, house_code) != 0) continue;
+
+            struct tm bh_in_tm = {0}, bh_out_tm = {0};
+            sscanf(bh_checkin, "%d/%d/%d", &bh_in_tm.tm_mday, &bh_in_tm.tm_mon, &bh_in_tm.tm_year);
+            sscanf(bh_checkout, "%d/%d/%d", &bh_out_tm.tm_mday, &bh_out_tm.tm_mon, &bh_out_tm.tm_year);
+            bh_in_tm.tm_mon -= 1; bh_out_tm.tm_mon -= 1;
+            bh_in_tm.tm_year -= 1900; bh_out_tm.tm_year -= 1900;
+
+            time_t bh_in = mktime(&bh_in_tm);
+            time_t bh_out = mktime(&bh_out_tm);
+
+            if ((checkin_time < bh_out) && (checkout_time > bh_in)) {
+                printf(RED_COLOR "This house is already booked from %s to %s.\n" RESET_COLOR, bh_checkin, bh_checkout);
+                conflict_found = 1;
+                break;
+            }
+        }
+        fclose(book_hist);
+
+        if (conflict_found) {
+            printf(YELLOW_COLOR "Please enter a different check-in and check-out date.\n" RESET_COLOR);
+            continue;
+        }
+
+        if (difftime(checkout_time, checkin_time) <= 0) {
+            printf(RED_COLOR "Check-out must be after Check-in. Try again.\n" RESET_COLOR);
+            continue;
+        }
+
+        if (difftime(checkin_time, mktime(&start_tm)) < 0 || difftime(checkout_time, mktime(&end_tm)) > 0) {
+            printf(RED_COLOR "Booking must be between %s and %s.\n" RESET_COLOR, start_date_str, end_date_str);
+            continue;
+        }
+
+        break;
     }
-    
 
     nights = (int)(difftime(checkout_time, checkin_time) / (60 * 60 * 24));
-    printf(GREEN_COLOR "Number of Nights: " RESET_COLOR "%d\n", nights);
-
-    // Transaction summary
     float total_price = nights * selected_house->price;
-    float refund_amount = total_price * 0.9;
+    float refund_amount = total_price * 0.9f;
 
     printf(GREEN_COLOR "\n==== TRANSACTION SUMMARY ====\n" RESET_COLOR);
     printf(WHITE_COLOR "Price per Night: " RESET_COLOR "%.2f\n", selected_house->price);
@@ -1364,28 +1381,23 @@ void customer_booking_page(const char *house_code) {
 
     float amount_paid = 0.0f;
     while (1) {
-        printf(GREEN_COLOR "\nEnter amount to pay: " RESET_COLOR);
+        printf(GREEN_COLOR "Enter amount to pay: " RESET_COLOR);
         scanf("%f", &amount_paid);
-
         if (amount_paid < total_price) {
-            printf(RED_COLOR "Insufficient payment! You must pay at least %.2f\n" RESET_COLOR, total_price);
+            printf(RED_COLOR "Insufficient! You must pay at least %.2f\n" RESET_COLOR, total_price);
         } else {
-            float change = amount_paid - total_price;
-        if (change > 0.0f) {
-            printf(GREEN_COLOR "Payment accepted. Your change is: %.2f\n" RESET_COLOR, change);
-        } else {
-            printf(GREEN_COLOR "Payment accepted.\n" RESET_COLOR);
-        }
+            if (amount_paid > total_price)
+                printf(GREEN_COLOR "Change: %.2f\n" RESET_COLOR, amount_paid - total_price);
             break;
         }
     }
 
     printf(RED_COLOR "\nCancellation Notice:\n" RESET_COLOR);
-    printf(YELLOW_COLOR "If you cancel later, only 90%% (%.2f) will be refunded.\n", refund_amount);
+    printf(YELLOW_COLOR "If you cancel later, only 90%% (%.2f) will be refunded.\n" RESET_COLOR, refund_amount);
     printf("Do you want to confirm the booking? (Y/N): " RESET_COLOR);
 
     char confirm;
-    getchar();  // flush newline
+    getchar();
     scanf("%c", &confirm);
     if (tolower(confirm) != 'y') {
         printf(RED_COLOR "\nBooking cancelled by user.\n" RESET_COLOR);
@@ -1395,23 +1407,45 @@ void customer_booking_page(const char *house_code) {
         return;
     }
 
-    Booking new_booking;
-    new_booking.id = booking_count + 1;
-    strcpy(new_booking.house_code, house_code);
-    new_booking.customer_id = guests;
-    new_booking.date = checkin;
-    strcpy(new_booking.status, "Pending");
+    append_booking_to_csv("Booking_history.csv", full_name, phone, guests, checkin, checkout, nights, selected_house);
 
-    bookings[booking_count++] = new_booking;
+    FILE *cal = fopen("Calendar.csv", "r");
+    FILE *temp = fopen("Calendar_temp.csv", "w");
+    if (cal && temp) {
+        char line[128], code[10], parsed_date[11], status[20];
+        time_t t;
+        time_t start_t = checkin_time;
+        time_t end_t = checkout_time;
+        char date_to_mark[32];
+        fgets(line, sizeof(line), cal);
+        fprintf(temp, "%s", line);
 
-    // Save to CSV
-    append_booking_to_csv("Booking_history.csv", full_name, phone, guests,
-                          checkin, checkout, nights, selected_house);
+        while (fgets(line, sizeof(line), cal)) {
+            sscanf(line, "%[^,],%[^,],%s", code, parsed_date, status);
+            int is_target_date = 0;
+            for (t = start_t; t < end_t; t += 86400) {
+                strftime(date_to_mark, sizeof(date_to_mark), "%Y-%m-%d", localtime(&t));
+                if (strcmp(parsed_date, date_to_mark) == 0 && strcmp(code, house_code) == 0) {
+                    is_target_date = 1;
+                    break;
+                }
+            }
+            if (is_target_date) {
+                fprintf(temp, "%s,%s,Not Available\n", code, parsed_date);
+            } else {
+                fprintf(temp, "%s", line);
+            }
+        }
 
-    printf(GREEN_COLOR "\nBooking request submitted successfully!\n" RESET_COLOR);
-    printf(YELLOW_COLOR "Press Enter to return to menu..." RESET_COLOR);
-    while (getchar() != '\n');
-    getchar();
+        fclose(cal);
+        fclose(temp);
+        remove("Calendar.csv");
+        rename("Calendar_temp.csv", "Calendar.csv");
+    }
+
+    printf(GREEN_COLOR "\nBooking confirmed!\n" RESET_COLOR);
+    printf(YELLOW_COLOR "Press Enter to return..." RESET_COLOR);
+    getchar(); getchar();
 }
 
 void customer_view_house_details(int house_index) {
@@ -1870,9 +1904,21 @@ void customer_my_booking() {
     float total = price * nights;
     float refund = total * 0.9f;
 
-    printf(GREEN_COLOR "\nBooking cancelled successfully!\n" RESET_COLOR);
+    printf(RED_COLOR "\nYou are about to cancel this booking.\n" RESET_COLOR);
     printf(WHITE_COLOR "Total Paid: " RESET_COLOR "%.2f\n", total);
     printf(WHITE_COLOR "Refund (90%%): " RESET_COLOR "%.2f\n", refund);
+    printf(YELLOW_COLOR "Are you sure you want to cancel this booking? (Y/N): " RESET_COLOR);
+
+    char confirm;
+    getchar();  // flush newline
+    scanf("%c", &confirm);
+
+    if (tolower(confirm) != 'y') {
+        printf(GREEN_COLOR "\nCancellation confirm.\n" RESET_COLOR);
+        printf(YELLOW_COLOR "Press Enter to return..." RESET_COLOR);
+        getchar(); getchar();
+        return;
+    }
 
     // Save to Cancelled_bookings.csv
     FILE *cancel_file = fopen("Cancelled_bookings.csv", "a");
@@ -1890,6 +1936,88 @@ void customer_my_booking() {
 
     fprintf(cancel_file, "%s,%.2f\n", bookings[choice - 1], refund);
     fclose(cancel_file);
+
+    // Remove the canceled booking from Booking_history.csv
+    FILE *original = fopen("Booking_history.csv", "r");
+    FILE *temp = fopen("temp_booking.csv", "w");
+
+    if (original && temp) {
+        char header[512];
+        fgets(header, sizeof(header), original);  // Read and write header
+        fputs(header, temp);
+
+        while (fgets(line, sizeof(line), original)) {
+            if (strcmp(line, bookings[choice - 1]) != 0) {
+                fputs(line, temp);
+            }
+        }
+
+        fclose(original);
+        fclose(temp);
+
+        // Overwrite Booking_history.csv with updated content
+        FILE *final = fopen("Booking_history.csv", "w");
+        FILE *temp_read = fopen("temp_booking.csv", "r");
+        if (final && temp_read) {
+            while (fgets(line, sizeof(line), temp_read)) {
+                fputs(line, final);
+            }
+            fclose(final);
+            fclose(temp_read);
+        }
+
+        remove("temp_booking.csv");
+    }
+// === Restore availability in Calendar.csv ===
+FILE *calendar = fopen("Calendar.csv", "r");
+FILE *calendar_temp = fopen("Calendar_temp.csv", "w");
+
+if (calendar && calendar_temp) {
+    char cal_line[256], cal_code[20], cal_date[20], cal_status[20];
+    char current_date[11];
+
+    // Convert checkin and checkout from DD/MM/YYYY to time_t
+    int d1, m1, y1, d2, m2, y2;
+    sscanf(checkin, "%d/%d/%d", &d1, &m1, &y1);
+    sscanf(checkout, "%d/%d/%d", &d2, &m2, &y2);
+
+    struct tm checkin_tm = {.tm_mday = d1, .tm_mon = m1 - 1, .tm_year = y1 - 1900, .tm_hour = 0, .tm_min = 0, .tm_sec = 1};
+    struct tm checkout_tm = {.tm_mday = d2, .tm_mon = m2 - 1, .tm_year = y2 - 1900, .tm_hour = 0, .tm_min = 0, .tm_sec = 1};
+
+    time_t checkin_time = mktime(&checkin_tm);
+    time_t checkout_time = mktime(&checkout_tm);
+
+    fgets(cal_line, sizeof(cal_line), calendar);  // header
+    fputs(cal_line, calendar_temp);
+
+    while (fgets(cal_line, sizeof(cal_line), calendar)) {
+        sscanf(cal_line, "%[^,],%[^,],%s", cal_code, cal_date, cal_status);
+
+        int should_update = 0;
+
+        time_t temp_time = checkin_time;
+        while (temp_time < checkout_time) {
+            strftime(current_date, sizeof(current_date), "%Y-%m-%d", localtime(&temp_time));
+
+            if (strcmp(cal_code, code) == 0 && strcmp(cal_date, current_date) == 0) {
+                should_update = 1;
+                break;
+            }
+            temp_time += 86400;
+        }
+
+        if (should_update) {
+            fprintf(calendar_temp, "%s,%s,Available\n", cal_code, cal_date);
+        } else {
+            fputs(cal_line, calendar_temp);
+        }
+    }
+
+    fclose(calendar);
+    fclose(calendar_temp);
+    remove("Calendar.csv");
+    rename("Calendar_temp.csv", "Calendar.csv");
+}
 
     printf(YELLOW_COLOR "\nCancellation recorded. Press Enter to return..." RESET_COLOR);
     getchar(); getchar();
