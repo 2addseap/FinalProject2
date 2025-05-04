@@ -125,6 +125,16 @@ void flush_input() {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
+// Removes surrounding quotes from a string (e.g. turns "\"P9\"" into "P9")
+void strip_quotes(char *str) {
+    int len = strlen(str);
+    if (len >= 2 && str[0] == '"' && str[len - 1] == '"') {
+        memmove(str, str + 1, len - 2);  // shift left
+        str[len - 2] = '\0';             // null-terminate
+    }
+}
+
+
 void to_lowercase(char *str) {
     for (int i = 0; str[i]; i++)
         str[i] = tolower(str[i]);
@@ -274,6 +284,10 @@ void load_properties_from_csv(const char *filename) {
         while (*ptr && i < 16) {
             fields[i++] = strdup(parse_csv_field(&ptr));
         }
+        for (int j = 0; j < i; j++) {
+            strip_quotes(fields[j]);
+        }
+        
 
         if (i < 16) {
             for (int j = 0; j < i; j++) free(fields[j]);
@@ -733,22 +747,23 @@ void manager_edit_house() {
     }
 
     int property_index = -1;
-    char trimmed_code[10];
-    strcpy(trimmed_code, houses[house_index].code);
-    trim_whitespace(trimmed_code);
-    to_uppercase(trimmed_code);
+    char target_code_clean[10];
+    strcpy(target_code_clean, houses[house_index].code);
+    trim_whitespace(target_code_clean);
+    to_uppercase(target_code_clean);
 
     for (int i = 0; i < property_count; i++) {
-        char prop_code[10];
-        strcpy(prop_code, properties[i].code);
-        trim_whitespace(prop_code);
-        to_uppercase(prop_code);
+        char prop_code_clean[10];
+        strcpy(prop_code_clean, properties[i].code);
+        trim_whitespace(prop_code_clean);
+        to_uppercase(prop_code_clean);
 
-        if (strcmp(prop_code, trimmed_code) == 0) {
+        if (strcmp(prop_code_clean, target_code_clean) == 0) {
             property_index = i;
             break;
         }
     }
+
 
     
 
@@ -880,21 +895,34 @@ void manager_edit_house() {
         fclose(brief);
     }
 
-    // Save Detail.csv
+// Save Detail.csv
 FILE *detail = fopen("Detail.csv", "w");
 if (detail) {
     fprintf(detail, "Code,ID,Name,Address,Province,Price,Area,Beds,Bedrooms,Bathrooms,MaxGuests,Facilities,Landmark,Transport,Essential,Rating\n");
     for (int i = 0; i < property_count; i++) {
-        fprintf(detail, "\"%s\",%d,\"%s\",\"%s\",\"%s\",%.0f,%.0f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
-            properties[i].code, properties[i].id, properties[i].name, properties[i].address, properties[i].province,
-            properties[i].price, properties[i].area, properties[i].beds, properties[i].bedrooms,
-            properties[i].bathrooms, properties[i].max_guests,
-            properties[i].facilities, properties[i].landmark,
-            properties[i].transportation, properties[i].essential,
-            properties[i].rating);              
+        fprintf(detail, "%s,%d,%s,%s,%s,%.0f,%.0f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
+            properties[i].code,
+            properties[i].id,
+            properties[i].name,
+            properties[i].address,
+            properties[i].province,
+            properties[i].price,
+            properties[i].area,
+            properties[i].beds,
+            properties[i].bedrooms,
+            properties[i].bathrooms,
+            properties[i].max_guests,
+            properties[i].facilities,
+            properties[i].landmark,
+            properties[i].transportation,
+            properties[i].essential,
+            properties[i].rating);
     }
     fclose(detail);
+} else {
+    printf(RED_COLOR "Failed to write to Detail.csv\n" RESET_COLOR);
 }
+
 
 
     printf(YELLOW_COLOR "\nChanges saved to both CSV files.\n" RESET_COLOR);
