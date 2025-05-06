@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include <time.h>
 
-// Define ANSI escape codes for colors
 #define RESET_COLOR "\033[0m"
 #define BLUE_COLOR "\033[1;34m"
 #define GREEN_COLOR "\033[1;32m"
@@ -19,20 +18,20 @@ void clear_screen() {
     #ifdef _WIN32
         system("cls");
     #else
-        printf("\033[H\033[J");  // Clear the screen using ANSI escape codes
+        printf("\033[H\033[J"); 
     #endif
-    fflush(stdout);  // Ensure everything is flushed and displayed properly
+    fflush(stdout);  
 }
 
 // Define structures
 
 typedef struct {
     char code[10];
-    char date[20];     // "YYYY-MM-DD"
-    char status[20];   // "Available", "Booked", "Unavailable"
+    char date[20];    
+    char status[20];   
 } CalendarEntry;
 
-CalendarEntry calendar[3000];  // enough for 100 houses × 30 days
+CalendarEntry calendar[3000]; 
 int calendar_count = 0;
 
 
@@ -118,17 +117,30 @@ void manager_set_availability();
 void generate_calendar_for_new_house(const char *house_code, int days_ahead);
 int parse_date(const char *date_str, struct tm *tm_out);
 char *parse_csv_field(char **line_ptr);
-//void display_calendar_grid(const char *house_code, int month, int year);
 
+//clear
 void flush_input() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
+
+void strip_quotes(char *str) {
+    int len = strlen(str);
+    if (len >= 2 && str[0] == '"' && str[len - 1] == '"') {
+        memmove(str, str + 1, len - 2);  
+        str[len - 2] = '\0';            
+    }
+}
+
+//lowercase for manager
+
 void to_lowercase(char *str) {
     for (int i = 0; str[i]; i++)
         str[i] = tolower(str[i]);
 }
+
+//upper case for manager
 
 void to_uppercase(char *str) {
     for (int i = 0; str[i]; i++)
@@ -144,13 +156,12 @@ void load_calendar(const char *filename) {
     }
 
     char line[256];
-    fgets(line, sizeof(line), file); // Skip header
-
+    fgets(line, sizeof(line), file); 
     calendar_count = 0;
     while (fgets(line, sizeof(line), file) && calendar_count < 1000) {
         CalendarEntry c;
         sscanf(line, "%9[^,],%19[^,],%14s", c.code, c.date, c.status);
-        to_uppercase(c.code);  // ADD THIS LINE
+        to_uppercase(c.code);
         calendar[calendar_count++] = c;
 
     }
@@ -158,6 +169,7 @@ void load_calendar(const char *filename) {
     fclose(file);
 }
 
+//save house data into csv
 
 void save_houses_to_csv(const char *filename) {
     FILE *file = fopen(filename, "w");
@@ -182,6 +194,7 @@ void save_houses_to_csv(const char *filename) {
     printf(GREEN_COLOR "Saved houses to CSV.\n" RESET_COLOR);
 }
 
+//save data back into csv
 void save_properties_to_csv(const char *filename) {
     FILE *file = fopen(filename, "w");
     if (!file) {
@@ -207,9 +220,10 @@ void save_properties_to_csv(const char *filename) {
 }
 
 
+//laod house data for customer function
 void load_houses_for_customer(const char *Briefly_Info)
  {
-    //printf("Loading from CSV file: %s\n", Briefly_Info);
+    
     FILE *file = fopen(Briefly_Info, "r");
     if (!file) {
         printf(RED_COLOR "Failed to open house CSV file.\n" RESET_COLOR);
@@ -217,7 +231,7 @@ void load_houses_for_customer(const char *Briefly_Info)
     }
 
     char line[512];
-    fgets(line, sizeof(line), file); // skip header
+    fgets(line, sizeof(line), file); 
 
     house_count = 0;
     while (fgets(line, sizeof(line), file) && house_count < MAX_HOUSES) {
@@ -242,17 +256,14 @@ void load_houses_for_customer(const char *Briefly_Info)
         token = strtok(NULL, ",");
         h.kitchens = token ? atoi(token) : 0;
         token = strtok(NULL, ",");
-        h.is_available = token ? atoi(token) : 1;  // default to 1 if missing
-
-        // printf("DEBUG LOAD: [%s] [%s] [%s] %.2f %.1f %d %d %d %d %d\n",
-        //     h.code, h.name, h.province, h.price, h.rating,
-        //     h.bedrooms, h.beds, h.bathrooms, h.kitchens, h.is_available);
-     
+        h.is_available = token ? atoi(token) : 1;  
         houses[house_count++] = h;
     }
 
     fclose(file);
 }
+
+//load property daya struct from csv
 
 void load_properties_from_csv(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -262,7 +273,7 @@ void load_properties_from_csv(const char *filename) {
     }
 
     char line[1024];
-    fgets(line, sizeof(line), file);  // skip header
+    fgets(line, sizeof(line), file);  
 
     property_count = 0;
     while (fgets(line, sizeof(line), file) && property_count < 100) {
@@ -274,6 +285,10 @@ void load_properties_from_csv(const char *filename) {
         while (*ptr && i < 16) {
             fields[i++] = strdup(parse_csv_field(&ptr));
         }
+        for (int j = 0; j < i; j++) {
+            strip_quotes(fields[j]);
+        }
+        
 
         if (i < 16) {
             for (int j = 0; j < i; j++) free(fields[j]);
@@ -307,9 +322,10 @@ void load_properties_from_csv(const char *filename) {
     fclose(file);
 }
 
+//load house data into manager
 
 void load_houses_for_manager() {
-    // Load houses from Briefly_Info.csv
+
     FILE *file = fopen("Briefly_Info.csv", "r");
     if (!file) {
         printf(RED_COLOR "Failed to open Briefly_Info.csv\n" RESET_COLOR);
@@ -317,7 +333,7 @@ void load_houses_for_manager() {
     }
 
     char line[512];
-    fgets(line, sizeof(line), file); // skip header
+    fgets(line, sizeof(line), file); 
     house_count = 0;
 
     while (fgets(line, sizeof(line), file) && house_count < MAX_HOUSES) {
@@ -328,6 +344,8 @@ void load_houses_for_manager() {
             &h.bedrooms, &h.beds, &h.bathrooms, &h.kitchens, &h.is_available);
 
         if (fields == 10) {
+            trim_whitespace(h.code);
+            to_uppercase_edit(h.code);
             houses[house_count++] = h;
         } else {
             printf(RED_COLOR "Warning: Skipped malformed line in Briefly_Info.csv\n" RESET_COLOR);
@@ -335,10 +353,10 @@ void load_houses_for_manager() {
     }
 
     fclose(file);
-
-    // Also load property details
-    load_properties_from_csv("Detail.csv");
+    load_properties_from_csv("Detail.csv");  
 }
+
+//to sync house and calendar!!! -_-
 
 void sync_house_availability_from_calendar() {
     for (int i = 0; i < house_count; i++) {
@@ -354,8 +372,6 @@ void sync_house_availability_from_calendar() {
     }
 }
 
-
-// Reads a field from CSV, respecting quoted commas
 char *parse_csv_field(char **line_ptr) {
     char *line = *line_ptr;
     static char buffer[256];
@@ -369,7 +385,7 @@ char *parse_csv_field(char **line_ptr) {
             continue;
         }
         if (*line == '"' && in_quotes && line[1] == ',') {
-            line += 2;  // Skip quote and comma
+            line += 2;  
             break;
         }
         if (*line == '"' && in_quotes && line[1] == '\0') {
@@ -377,7 +393,7 @@ char *parse_csv_field(char **line_ptr) {
             break;
         }
         if (*line == ',' && !in_quotes) {
-            line++;  // Skip comma
+            line++;  
             break;
         }
         buffer[i++] = *line++;
@@ -399,36 +415,43 @@ int parse_date(const char *date_str, struct tm *tm_out) {
     return 0;
 }
 
+//for load house data from csv (detail)
 
 void load_detailed_houses_from_csv(const char *Detail) {
     FILE *file = fopen(Detail, "r");
     if (!file) {
-        printf(RED_COLOR "Failed to open detailed house file.\n" RESET_COLOR);
+        printf(RED_COLOR "Failed to open Detail.csv\n" RESET_COLOR);
         return;
     }
 
-    //printf(GREEN_COLOR "Loading Detailed Houses...\n" RESET_COLOR); // Debug print
+
 
     char line[1024];
-    fgets(line, sizeof(line), file); // skip header
+    fgets(line, sizeof(line), file); 
 
     detail_count = 0;
-    while (fgets(line, sizeof(line), file) && detail_count < 100) {
+
+    while (fgets(line, sizeof(line), file) && detail_count < MAX_HOUSES) {
         char *ptr = line;
         DetailedHouse d;
 
         char *fields[16];
         int i = 0;
+
         while (*ptr && i < 16) {
             fields[i++] = strdup(parse_csv_field(&ptr));
         }
 
         if (i < 16) {
-            //printf(RED_COLOR "Malformed line (only %d fields): %s\n" RESET_COLOR, i, line);
+            printf(RED_COLOR "Warning: Skipped malformed line in Detail.csv\n" RESET_COLOR);
             for (int j = 0; j < i; j++) free(fields[j]);
             continue;
         }
+
         strcpy(d.code, fields[0]);
+        trim_whitespace(d.code);
+        to_uppercase_edit(d.code);
+
         strcpy(d.id, fields[1]);
         strcpy(d.name, fields[2]);
         strcpy(d.address, fields[3]);
@@ -445,13 +468,13 @@ void load_detailed_houses_from_csv(const char *Detail) {
         strcpy(d.essential, fields[14]);
         d.rating = atof(fields[15]);
 
-        for (int j = 0; j < 16; j++) free(fields[j]);  // Clean up
+        for (int j = 0; j < 16; j++) free(fields[j]);
 
         details[detail_count++] = d;
     }
 
     fclose(file);
-    //printf(GREEN_COLOR "Detailed houses loaded successfully: %d items\n" RESET_COLOR, detail_count);  // Debug print
+
 }
 
 void append_booking_to_csv(
@@ -464,20 +487,18 @@ void append_booking_to_csv(
     int nights,
     House *h
 ) {
-    FILE *file = fopen(filename, "a+");  // Open for append and read
+    FILE *file = fopen(filename, "a+");  
     if (!file) {
         printf(RED_COLOR "Failed to open booking history file.\n" RESET_COLOR);
         return;
     }
-
-    // Check if file is empty to write the header
+    
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
     if (size == 0) {
         fprintf(file, "Fullname,Phone,Guests,CheckIn,CheckOut,Nights,Code,Name,Province,Price,Rating\n");
     }
 
-    // Write booking entry
     fprintf(file, "\"%s\",\"%s\",%d,%02d/%02d/%04d,%02d/%02d/%04d,%d,%s,\"%s\",\"%s\",%.2f,%.1f\n",
             full_name, phone, guests,
             checkin.day, checkin.month, checkin.year,
@@ -487,6 +508,8 @@ void append_booking_to_csv(
 
     fclose(file);
 }
+
+//fav house
 
 int favorite_house(int house_index) {
     House h = houses[house_index];
@@ -501,7 +524,7 @@ int favorite_house(int house_index) {
                 fclose(check);
                 printf(RED_COLOR "This house is already in your favorites list.\n" RESET_COLOR);
                 getchar(); getchar();
-                return 0;  // Already in favorites
+                return 0;  
             }
         }
         fclose(check);
@@ -520,121 +543,142 @@ int favorite_house(int house_index) {
 
     printf(GREEN_COLOR "House added to favorites!\n" RESET_COLOR);
     getchar(); getchar();
-    return 1;  // Successfully added
+    return 1;  
 }
 
-// Add house function
-
-// void to_lowercase(char *str) {
-//     for (int i = 0; str[i]; i++)
-//         str[i] = tolower(str[i]);
-// }
-
-// void to_uppercase(char *str) {
-//     for (int i = 0; str[i]; i++)
-//         str[i] = toupper((unsigned char)str[i]);
-// }
+//manager add house function
 
 void manager_add_house() {
-    clear_screen();  // Ensure fresh screen when entering
+    clear_screen(); 
 
     if (property_count >= 100 || house_count >= 100) {
         printf(RED_COLOR "Cannot add more houses. Maximum limit reached.\n" RESET_COLOR);
         flush_input();
         return;
     }
-
+    
     Property new_property;
     new_property.id = property_count + 1;
-
+    
     printf(GREEN_COLOR "\nEnter house name: " RESET_COLOR);
-    flush_input();  // Clear leftover input
+    flush_input();  
     fgets(new_property.name, sizeof(new_property.name), stdin);
     new_property.name[strcspn(new_property.name, "\n")] = 0;
-
+    
     printf(GREEN_COLOR "Enter house address: " RESET_COLOR);
     fgets(new_property.address, sizeof(new_property.address), stdin);
     new_property.address[strcspn(new_property.address, "\n")] = 0;
-
-    printf(GREEN_COLOR "Enter house province (Huahin/Cha-am, Pattaya, Kanchanaburi): " RESET_COLOR);
-    fgets(new_property.province, sizeof(new_property.province), stdin);
-    new_property.province[strcspn(new_property.province, "\n")] = 0;
-
-    char province_lower[50];
-    strcpy(province_lower, new_property.province);
-    to_lowercase(province_lower);
-
-    if (strcmp(province_lower, "huahin/cha-am") == 0)
-        strcpy(new_property.province, "Huahin/Cha-am");
-    else if (strcmp(province_lower, "pattaya") == 0)
-        strcpy(new_property.province, "Pattaya");
-    else if (strcmp(province_lower, "kanchanaburi") == 0)
-        strcpy(new_property.province, "Kanchanaburi");
-    else
-        strcpy(new_property.province, "Unknown");
-
-    printf(GREEN_COLOR "Enter price: " RESET_COLOR);
-    scanf("%f", &new_property.price);
+    
+    int province_choice;
+    while (1) {
+        printf(GREEN_COLOR "Select house province:\n" RESET_COLOR);
+        printf("1. Huahin/Cha-am\n");
+        printf("2. Pattaya\n");
+        printf("3. Kanchanaburi\n");
+        printf("Choose (1-3): ");
+        scanf("%d", &province_choice);
+        flush_input();
+    
+        if (province_choice == 1) {
+            strcpy(new_property.province, "Huahin/Cha-am");
+            break;
+        } else if (province_choice == 2) {
+            strcpy(new_property.province, "Pattaya");
+            break;
+        } else if (province_choice == 3) {
+            strcpy(new_property.province, "Kanchanaburi");
+            break;
+        } else {
+            printf(RED_COLOR "Invalid choice! Please select 1, 2, or 3.\n" RESET_COLOR);
+        }
+    }
+    
+    while (1) {
+        printf(GREEN_COLOR "Enter price: " RESET_COLOR);
+        if (scanf("%f", &new_property.price) == 1 && new_property.price >= 0) break;
+        printf(RED_COLOR "Invalid price. Please enter a valid number.\n" RESET_COLOR);
+        flush_input();
+    }
     flush_input();
-
-    printf(GREEN_COLOR "Enter area (sqm): " RESET_COLOR);
-    scanf("%f", &new_property.area);
+    
+    while (1) {
+        printf(GREEN_COLOR "Enter area (sqm): " RESET_COLOR);
+        if (scanf("%f", &new_property.area) == 1 && new_property.area >= 0) break;
+        printf(RED_COLOR "Invalid area. Please enter a valid number.\n" RESET_COLOR);
+        flush_input();
+    }
     flush_input();
-
-    printf(GREEN_COLOR "Enter number of beds: " RESET_COLOR);
-    scanf("%d", &new_property.beds);
+    
+    while (1) {
+        printf(GREEN_COLOR "Enter number of beds: " RESET_COLOR);
+        if (scanf("%d", &new_property.beds) == 1 && new_property.beds >= 0) break;
+        printf(RED_COLOR "Invalid beds. Please enter a valid number.\n" RESET_COLOR);
+        flush_input();
+    }
     flush_input();
-
-    printf(GREEN_COLOR "Enter number of bedrooms: " RESET_COLOR);
-    scanf("%d", &new_property.bedrooms);
+    
+    while (1) {
+        printf(GREEN_COLOR "Enter number of bedrooms: " RESET_COLOR);
+        if (scanf("%d", &new_property.bedrooms) == 1 && new_property.bedrooms >= 0) break;
+        printf(RED_COLOR "Invalid bedrooms. Please enter a valid number.\n" RESET_COLOR);
+        flush_input();
+    }
     flush_input();
-
-    printf(GREEN_COLOR "Enter number of bathrooms: " RESET_COLOR);
-    scanf("%d", &new_property.bathrooms);
+    
+    while (1) {
+        printf(GREEN_COLOR "Enter number of bathrooms: " RESET_COLOR);
+        if (scanf("%d", &new_property.bathrooms) == 1 && new_property.bathrooms >= 0) break;
+        printf(RED_COLOR "Invalid bathrooms. Please enter a valid number.\n" RESET_COLOR);
+        flush_input();
+    }
     flush_input();
-
-    printf(GREEN_COLOR "Enter max number of guests: " RESET_COLOR);
-    scanf("%d", &new_property.max_guests);
+    
+    while (1) {
+        printf(GREEN_COLOR "Enter max number of guests: " RESET_COLOR);
+        if (scanf("%d", &new_property.max_guests) == 1 && new_property.max_guests >= 0) break;
+        printf(RED_COLOR "Invalid max guests. Please enter a valid number.\n" RESET_COLOR);
+        flush_input();
+    }
     flush_input();
-
+    
     printf(GREEN_COLOR "Enter facilities: " RESET_COLOR);
     fgets(new_property.facilities, sizeof(new_property.facilities), stdin);
     new_property.facilities[strcspn(new_property.facilities, "\n")] = 0;
-
+    
     printf(GREEN_COLOR "Enter landmark: " RESET_COLOR);
     fgets(new_property.landmark, sizeof(new_property.landmark), stdin);
     new_property.landmark[strcspn(new_property.landmark, "\n")] = 0;
-
+    
     printf(GREEN_COLOR "Enter transportation: " RESET_COLOR);
     fgets(new_property.transportation, sizeof(new_property.transportation), stdin);
     new_property.transportation[strcspn(new_property.transportation, "\n")] = 0;
-
+    
     printf(GREEN_COLOR "Enter essentials: " RESET_COLOR);
     fgets(new_property.essential, sizeof(new_property.essential), stdin);
     new_property.essential[strcspn(new_property.essential, "\n")] = 0;
-
+    
     while (1) {
         printf(GREEN_COLOR "Enter rating (1.0 - 10.0): " RESET_COLOR);
         int result = scanf("%f", &new_property.rating);
         flush_input();
-
+    
         if (result == 1 && new_property.rating >= 1.0 && new_property.rating <= 10.0) {
             break;
         } else {
             printf(RED_COLOR "Invalid. Please enter a number between 1.0 and 10.0.\n" RESET_COLOR);
         }
     }
-
+    
     char prefix[4];
-    if (strcmp(province_lower, "huahin/cha-am") == 0)
+    if (province_choice == 1)
         strcpy(prefix, "HH");
-    else if (strcmp(province_lower, "pattaya") == 0)
+    else if (province_choice == 2)
         strcpy(prefix, "P");
-    else if (strcmp(province_lower, "kanchanaburi") == 0)
+    else if (province_choice == 3)
         strcpy(prefix, "K");
     else
         strcpy(prefix, "U");
-
+    
     int max_suffix = -1;
     for (int i = 0; i < house_count; i++) {
         if (strncmp(houses[i].code, prefix, strlen(prefix)) == 0) {
@@ -645,7 +689,7 @@ void manager_add_house() {
         }
     }
     int next_number = max_suffix + 1;
-
+    
     House new_house;
     snprintf(new_house.code, sizeof(new_house.code), "%s%d", prefix, next_number);
     strcpy(new_house.name, new_property.name);
@@ -658,11 +702,11 @@ void manager_add_house() {
     new_house.kitchens = 1;
     new_house.is_available = 1;
     houses[house_count++] = new_house;
-
+    
     strcpy(new_property.code, new_house.code);
     new_property.is_available = 1;
     properties[property_count++] = new_property;
-
+    
     FILE *detailFile = fopen("Detail.csv", "a");
     if (detailFile) {
         fprintf(detailFile, "%s,%d,%s,%s,%s,%.0f,%.0f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
@@ -673,7 +717,7 @@ void manager_add_house() {
             new_property.essential, new_property.rating);
         fclose(detailFile);
     }
-
+    
     FILE *briefFile = fopen("Briefly_Info.csv", "a");
     if (briefFile) {
         fprintf(briefFile, "%s,%s,%s,%.0f,%.1f,%d,%d,%d,%d,%d\n",
@@ -683,88 +727,90 @@ void manager_add_house() {
             new_house.is_available);
         fclose(briefFile);
     }
-
+    
     generate_calendar_for_new_house(new_house.code, 30);
-
+    
     printf(BLUE_COLOR "\nHouse successfully added with code: %s\n" RESET_COLOR, new_house.code);
     printf(YELLOW_COLOR "\nPress Enter to return to Manager Menu..." RESET_COLOR);
-    getchar();  // Wait for Enter
-    clear_screen();  // ✅ Clear before returning
+    getchar(); 
+    clear_screen();  
 }
 
 // Edit house function
 
 void trim_whitespace(char *str) {
-    char *end;
 
-    // Trim leading space
-    while (isspace((unsigned char)*str)) str++;
+    char *start = str;
+    while (isspace(*start)) start++;
+    if (start != str) memmove(str, start, strlen(start) + 1);
 
-    if (*str == 0) return;  // All spaces
 
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end)) end--;
-
-    // Write new null terminator
+    char *end = str + strlen(str) - 1;
+    while (end > str && isspace(*end)) end--;
     *(end + 1) = '\0';
 }
+
+void to_uppercase_edit(char *str) {
+    for (int i = 0; str[i]; i++) str[i] = toupper(str[i]);
+}
+
 
 void manager_edit_house() {
     char target_code[10];
     printf(GREEN_COLOR "Enter the house code to edit (e.g. HH1, P3): " RESET_COLOR);
-    getchar(); // flush newline
+    getchar(); 
     fgets(target_code, sizeof(target_code), stdin);
     target_code[strcspn(target_code, "\n")] = 0;
-    to_uppercase(target_code);  // <-- Add this line
+    trim_whitespace(target_code);
+    to_uppercase_edit(target_code);
+
 
     int house_index = -1;
     for (int i = 0; i < house_count; i++) {
-        if (strcmp(houses[i].code, target_code) == 0) {
+        char code_clean[10];
+        strcpy(code_clean, houses[i].code);
+        trim_whitespace(code_clean);
+        to_uppercase_edit(code_clean);
+    
+        if (strcmp(code_clean, target_code) == 0) {
             house_index = i;
             break;
         }
     }
-
+    
     if (house_index == -1) {
         printf(RED_COLOR "House code not found in summary (Briefly_Info.csv).\n" RESET_COLOR);
         getchar(); getchar();
         return;
     }
-
+    
     int property_index = -1;
-    char trimmed_code[10];
-    strcpy(trimmed_code, houses[house_index].code);
-    trim_whitespace(trimmed_code);
-    to_uppercase(trimmed_code);
 
     for (int i = 0; i < property_count; i++) {
-        char prop_code[10];
-        strcpy(prop_code, properties[i].code);
-        trim_whitespace(prop_code);
-        to_uppercase(prop_code);
-
-        if (strcmp(prop_code, trimmed_code) == 0) {
+        char prop_code_clean[10];
+        strcpy(prop_code_clean, properties[i].code);
+        trim_whitespace(prop_code_clean);
+        to_uppercase_edit(prop_code_clean);
+    
+        if (strcmp(prop_code_clean, target_code) == 0) {
             property_index = i;
             break;
         }
     }
-
     
-
     if (property_index == -1) {
         printf(RED_COLOR "Matching house not found in Detail.csv\n" RESET_COLOR);
         getchar(); getchar();
         return;
     }
-
+    
     Property *p = &properties[property_index];
     House *h = &houses[house_index];
     char buffer[256];
-
+    
     printf(GREEN_COLOR "\nEditing house: %s (%s)\n" RESET_COLOR, h->code, p->name);
-
-    getchar(); // clear newline
+    
+    getchar();
     printf("Current name: %s\nNew name: ", p->name);
     fgets(buffer, sizeof(buffer), stdin);
     if (buffer[0] != '\n') {
@@ -772,100 +818,140 @@ void manager_edit_house() {
         strcpy(p->name, buffer);
         strcpy(h->name, buffer);
     }
-
+    
     printf("Current address: %s\nNew address: ", p->address);
     fgets(buffer, sizeof(buffer), stdin);
     if (buffer[0] != '\n') {
         buffer[strcspn(buffer, "\n")] = 0;
         strcpy(p->address, buffer);
     }
-
-    printf("Current province: %s\nNew province: ", p->province);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') {
-        buffer[strcspn(buffer, "\n")] = 0;
-        strcpy(p->province, buffer);
-        strcpy(h->province, buffer);
+    
+    printf("Current province: %s\n", p->province);
+    while (1) {
+        printf(GREEN_COLOR "Choose new province (leave blank to keep current):\n" RESET_COLOR);
+        printf("1. Huahin/Cha-am\n");
+        printf("2. Pattaya\n");
+        printf("3. Kanchanaburi\n");
+        printf("Enter choice (1-3) or press Enter to skip: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        int choice = atoi(buffer);
+        if (choice == 1) { strcpy(p->province, "Huahin/Cha-am"); strcpy(h->province, "Huahin/Cha-am"); break; }
+        if (choice == 2) { strcpy(p->province, "Pattaya"); strcpy(h->province, "Pattaya"); break; }
+        if (choice == 3) { strcpy(p->province, "Kanchanaburi"); strcpy(h->province, "Kanchanaburi"); break; }
+        printf(RED_COLOR "Invalid choice. Try again.\n" RESET_COLOR);
     }
-
-    printf("Current price: %.2f\nNew price: ", p->price);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') {
-        sscanf(buffer, "%f", &p->price);
-        h->price = p->price;
+    
+    printf("Current price: %.2f\n", p->price);
+    while (1) {
+        printf("New price: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        if (sscanf(buffer, "%f", &p->price) == 1 && p->price >= 0) {
+            h->price = p->price;
+            break;
+        }
+        printf(RED_COLOR "Invalid price. Try again.\n" RESET_COLOR);
     }
-
-    printf("Current area: %.2f\nNew area: ", p->area);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') sscanf(buffer, "%f", &p->area);
-
-    printf("Current beds: %d\nNew beds: ", p->beds);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') {
-        sscanf(buffer, "%d", &p->beds);
-        h->beds = p->beds;
+    
+    printf("Current area: %.2f\n", p->area);
+    while (1) {
+        printf("New area: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        if (sscanf(buffer, "%f", &p->area) == 1 && p->area >= 0) break;
+        printf(RED_COLOR "Invalid area. Try again.\n" RESET_COLOR);
     }
-
-    printf("Current bedrooms: %d\nNew bedrooms: ", p->bedrooms);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') {
-        sscanf(buffer, "%d", &p->bedrooms);
-        h->bedrooms = p->bedrooms;
+    
+    printf("Current beds: %d\n", p->beds);
+    while (1) {
+        printf("New beds: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        if (sscanf(buffer, "%d", &p->beds) == 1 && p->beds >= 0) {
+            h->beds = p->beds;
+            break;
+        }
+        printf(RED_COLOR "Invalid beds. Try again.\n" RESET_COLOR);
     }
-
-    printf("Current bathrooms: %d\nNew bathrooms: ", p->bathrooms);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') {
-        sscanf(buffer, "%d", &p->bathrooms);
-        h->bathrooms = p->bathrooms;
+    
+    printf("Current bedrooms: %d\n", p->bedrooms);
+    while (1) {
+        printf("New bedrooms: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        if (sscanf(buffer, "%d", &p->bedrooms) == 1 && p->bedrooms >= 0) {
+            h->bedrooms = p->bedrooms;
+            break;
+        }
+        printf(RED_COLOR "Invalid bedrooms. Try again.\n" RESET_COLOR);
     }
-
-    printf("Current max guests: %d\nNew max guests: ", p->max_guests);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') sscanf(buffer, "%d", &p->max_guests);
-
+    
+    printf("Current bathrooms: %d\n", p->bathrooms);
+    while (1) {
+        printf("New bathrooms: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        if (sscanf(buffer, "%d", &p->bathrooms) == 1 && p->bathrooms >= 0) {
+            h->bathrooms = p->bathrooms;
+            break;
+        }
+        printf(RED_COLOR "Invalid bathrooms. Try again.\n" RESET_COLOR);
+    }
+    
+    printf("Current max guests: %d\n", p->max_guests);
+    while (1) {
+        printf("New max guests: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
+        if (sscanf(buffer, "%d", &p->max_guests) == 1 && p->max_guests >= 0) break;
+        printf(RED_COLOR "Invalid max guests. Try again.\n" RESET_COLOR);
+    }
+    
     printf("Current facilities: %s\nNew facilities: ", p->facilities);
     fgets(buffer, sizeof(buffer), stdin);
     if (buffer[0] != '\n') {
         buffer[strcspn(buffer, "\n")] = 0;
         strcpy(p->facilities, buffer);
     }
-
+    
     printf("Current landmark: %s\nNew landmark: ", p->landmark);
     fgets(buffer, sizeof(buffer), stdin);
     if (buffer[0] != '\n') {
         buffer[strcspn(buffer, "\n")] = 0;
         strcpy(p->landmark, buffer);
     }
-
+    
     printf("Current transportation: %s\nNew transportation: ", p->transportation);
     fgets(buffer, sizeof(buffer), stdin);
     if (buffer[0] != '\n') {
         buffer[strcspn(buffer, "\n")] = 0;
         strcpy(p->transportation, buffer);
     }
-
+    
     printf("Current essentials: %s\nNew essentials: ", p->essential);
     fgets(buffer, sizeof(buffer), stdin);
     if (buffer[0] != '\n') {
         buffer[strcspn(buffer, "\n")] = 0;
         strcpy(p->essential, buffer);
     }
-
-    printf("Current rating: %.1f\nNew rating (1 - 10): ", p->rating);
-    fgets(buffer, sizeof(buffer), stdin);
-    if (buffer[0] != '\n') {
+    
+    printf("Current rating: %.1f\n", p->rating);
+    while (1) {
+        printf("New rating (1 - 10): ");
+        fgets(buffer, sizeof(buffer), stdin);
+        if (buffer[0] == '\n') break;
         float r;
-        sscanf(buffer, "%f", &r);
-        if (r >= 1 && r <= 10) {
+        if (sscanf(buffer, "%f", &r) == 1 && r >= 1 && r <= 10) {
             p->rating = r;
             h->rating = r;
+            break;
         }
+        printf(RED_COLOR "Invalid rating. Must be 1-10. Try again.\n" RESET_COLOR);
     }
 
-    printf(GREEN_COLOR "\nHouse updated successfully.\n" RESET_COLOR);
-
-    // Save Briefly_Info.csv
+    //check briefly
+    
     FILE *brief = fopen("Briefly_Info.csv", "w");
     if (brief) {
         fprintf(brief, "Code,Name,Province,Price,Rating,Bedroom,Bed,Bathroom,Kitchen,Availability\n");
@@ -879,37 +965,50 @@ void manager_edit_house() {
         }
         fclose(brief);
     }
-
-    // Save Detail.csv
-FILE *detail = fopen("Detail.csv", "w");
-if (detail) {
-    fprintf(detail, "Code,ID,Name,Address,Province,Price,Area,Beds,Bedrooms,Bathrooms,MaxGuests,Facilities,Landmark,Transport,Essential,Rating\n");
-    for (int i = 0; i < property_count; i++) {
-        fprintf(detail, "\"%s\",%d,\"%s\",\"%s\",\"%s\",%.0f,%.0f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
-            properties[i].code, properties[i].id, properties[i].name, properties[i].address, properties[i].province,
-            properties[i].price, properties[i].area, properties[i].beds, properties[i].bedrooms,
-            properties[i].bathrooms, properties[i].max_guests,
-            properties[i].facilities, properties[i].landmark,
-            properties[i].transportation, properties[i].essential,
-            properties[i].rating);              
+    
+    //check detail
+    FILE *detail = fopen("Detail.csv", "w");
+    if (detail) {
+        fprintf(detail, "Code,ID,Name,Address,Province,Price,Area,Beds,Bedrooms,Bathrooms,MaxGuests,Facilities,Landmark,Transport,Essential,Rating\n");
+        for (int i = 0; i < property_count; i++) {
+            fprintf(detail, "%s,%d,%s,%s,%s,%.0f,%.0f,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",%.1f\n",
+                properties[i].code,
+                properties[i].id,
+                properties[i].name,
+                properties[i].address,
+                properties[i].province,
+                properties[i].price,
+                properties[i].area,
+                properties[i].beds,
+                properties[i].bedrooms,
+                properties[i].bathrooms,
+                properties[i].max_guests,
+                properties[i].facilities,
+                properties[i].landmark,
+                properties[i].transportation,
+                properties[i].essential,
+                properties[i].rating);
+        }
+        fclose(detail);
+    } else {
+        printf(RED_COLOR "Failed to write to Detail.csv\n" RESET_COLOR);
     }
-    fclose(detail);
-}
-
-
+    
+    printf(GREEN_COLOR "\nHouse updated successfully.\n" RESET_COLOR);
     printf(YELLOW_COLOR "\nChanges saved to both CSV files.\n" RESET_COLOR);
-    getchar(); // pause
+    getchar(); 
 }
 
-// Call this inside manager_add_house() after adding the new house
+//auto create a calender house for 30 days
+
 void generate_calendar_for_new_house(const char *house_code, int days_ahead) {
-    FILE *file = fopen("Calendar.csv", "a"); // append mode
+    FILE *file = fopen("Calendar.csv", "a"); 
     if (!file) {
         printf(RED_COLOR "Failed to open Calendar.csv\n" RESET_COLOR);
         return;
     }
 
-    // Write header if file is new
+    
     fseek(file, 0, SEEK_END);
     if (ftell(file) == 0) {
         fprintf(file, "Code,Date,Status\n");
@@ -921,7 +1020,7 @@ void generate_calendar_for_new_house(const char *house_code, int days_ahead) {
 
     for (int i = 0; i < days_ahead; i++) {
         date.tm_mday += 1;
-        mktime(&date);  // normalize the date (e.g. handle overflow to next month)
+        mktime(&date); 
         strftime(date_str, sizeof(date_str), "%Y-%m-%d", &date);
         fprintf(file, "%s,%s,Available\n", house_code, date_str);
     }
@@ -929,12 +1028,8 @@ void generate_calendar_for_new_house(const char *house_code, int days_ahead) {
     fclose(file);
 }
 
-// void to_uppercase(char *str) {
-//     for (int i = 0; str[i]; i++)
-//         str[i] = toupper((unsigned char)str[i]);
-// }
+//manager delete house function
 
-// Step 1: Function to delete house
 void manager_delete_house() {
     clear_screen();
     char target_code[10];
@@ -942,7 +1037,7 @@ void manager_delete_house() {
     scanf("%s", target_code);
     to_uppercase(target_code);
 
-    // Find house index
+
     int house_index = -1;
     for (int i = 0; i < house_count; i++) {
         if (strcmp(houses[i].code, target_code) == 0) {
@@ -957,7 +1052,7 @@ void manager_delete_house() {
         return;
     }
 
-    // Warn if house is booked
+    
     for (int i = 0; i < calendar_count; i++) {
         if (strcmp(calendar[i].code, target_code) == 0 && strcmp(calendar[i].status, "Booked") == 0) {
             printf(YELLOW_COLOR "Warning: This house has booked dates!\n" RESET_COLOR);
@@ -965,7 +1060,7 @@ void manager_delete_house() {
         }
     }
 
-    // Confirm deletion
+    // confirm deletion function asking for delete or not
     printf(YELLOW_COLOR "Are you sure you want to delete house %s - \"%s\"? (Y/N): " RESET_COLOR,
            houses[house_index].code, houses[house_index].name);
     char confirm;
@@ -977,13 +1072,13 @@ void manager_delete_house() {
         return;
     }
 
-    // Remove from houses[]
+
     for (int i = house_index; i < house_count - 1; i++) {
         houses[i] = houses[i + 1];
     }
     house_count--;
 
-    // Remove from properties[]
+    
     int prop_index = -1;
     for (int i = 0; i < property_count; i++) {
         if (strcmp(properties[i].code, target_code) == 0) {
@@ -998,7 +1093,7 @@ void manager_delete_house() {
         property_count--;
     }
 
-    // Remove from calendar[]
+    
     int new_calendar_count = 0;
     for (int i = 0; i < calendar_count; i++) {
         if (strcmp(calendar[i].code, target_code) != 0) {
@@ -1007,7 +1102,7 @@ void manager_delete_house() {
     }
     calendar_count = new_calendar_count;
 
-    // Re-save all affected CSV files
+    // save house again in csv
     save_houses_to_csv("Briefly_Info.csv");
     save_properties_to_csv("Detail.csv");
 
@@ -1043,32 +1138,31 @@ void display_calendar_grid(const char *house_code, int year, int month) {
         month_name(month), year, house_code);
  
 
-    // Day-of-week headers
+        
     for (int i = 0; i < 7; i++) {
         printf("%-4s", days[i]);
     }
     printf("\n");
 
-    // First day of the month
+    
     struct tm first = {0};
     first.tm_year = year - 1900;
     first.tm_mon = month - 1;
     first.tm_mday = 1;
-    mktime(&first);  // Normalize
+    mktime(&first);  
 
     int first_wday = first.tm_wday;
 
-    // Days in month
     int days_in_month[] = { 31, is_leap_year(year) ? 29 : 28, 31, 30, 31, 30,
                             31, 31, 30, 31, 30, 31 };
     int total_days = days_in_month[month - 1];
 
-    // Pad before first date
+
     for (int i = 0; i < first_wday; i++) {
-        printf("    ");  // 4 spaces for alignment
+        printf("    "); 
     }
 
-    // Print each day with status
+
     for (int day = 1; day <= total_days; day++) {
         char date_str[20];
         snprintf(date_str, sizeof(date_str), "%04d-%02d-%02d", year, month, day);
@@ -1089,8 +1183,7 @@ void display_calendar_grid(const char *house_code, int year, int month) {
 
         char cell[5];
         snprintf(cell, sizeof(cell), "%02d%c", day, status_char);
-        printf("%-4s", cell);  // Print in a 4-space-wide column
-
+        printf("%-4s", cell);
         if ((first_wday + day) % 7 == 0) {
             printf("\n");
         }
@@ -1160,7 +1253,7 @@ void manager_set_availability() {
             if (option == 1) {
                 printf(GREEN_COLOR "Enter reason to block (e.g., MAINTENANCE): " RESET_COLOR);
                 char reason[30];
-                getchar(); // flush
+                getchar(); 
                 fgets(reason, sizeof(reason), stdin);
                 reason[strcspn(reason, "\n")] = 0;
                 to_uppercase(reason);
@@ -1177,7 +1270,6 @@ void manager_set_availability() {
         }
     }
 
-    // Save updated calendar
     FILE *file = fopen("Calendar.csv", "w");
     if (file) {
         fprintf(file, "Code,Date,Status\n");
@@ -1206,7 +1298,6 @@ void manager_view_all_houses() {
         printf("========================\n" RESET_COLOR);
 
         for (int i = 0; i < house_count; i++) {
-            //int i = house_count;
             printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, i + 1);
             printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
             printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
@@ -1221,12 +1312,13 @@ void manager_view_all_houses() {
 
     printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
     getchar();
-    getchar();  // to pause and wait for user input
+    getchar(); 
 }
 
-char unique_codes[50][10];  // max 50 unique house codes
+char unique_codes[50][10];  
 int unique_count = 0;
 
+//view house booking :)
 
 void manager_view_bookings_for_house() {
     clear_screen();
@@ -1238,17 +1330,15 @@ void manager_view_bookings_for_house() {
     }
 
     char line[512];
-    fgets(line, sizeof(line), file); // skip header
+    fgets(line, sizeof(line), file);
 
-    char unique_codes[50][10];  // Store up to 50 unique house codes
+    char unique_codes[50][10]; 
     int unique_count = 0;
 
-    // First pass: gather unique house codes
     while (fgets(line, sizeof(line), file)) {
         char *token;
         char code[10];
 
-        // Skip to the house code field (7th field, index 6)
         int field = 0;
         token = strtok(line, ",");
         while (token != NULL && field < 6) {
@@ -1259,11 +1349,9 @@ void manager_view_bookings_for_house() {
         if (token != NULL) {
             strcpy(code, token);
 
-            // Remove surrounding quotes if needed
             if (code[0] == '"') memmove(code, code + 1, strlen(code));
             if (code[strlen(code) - 1] == '"') code[strlen(code) - 1] = '\0';
 
-            // Add to list if not already present
             int exists = 0;
             for (int i = 0; i < unique_count; i++) {
                 if (strcmp(unique_codes[i], code) == 0) {
@@ -1293,7 +1381,6 @@ void manager_view_bookings_for_house() {
         printf("%d. %s\n", i + 1, unique_codes[i]);
     }
 
-    // Ask for input
     char input_code[10];
     printf("\nEnter house code to view bookings: ");
     scanf("%s", input_code);
@@ -1304,7 +1391,7 @@ void manager_view_bookings_for_house() {
     printf("     Bookings for House Code: %s         \n", input_code);
     printf("=========================================\n");
 
-    // Show bookings for selected house
+    // show bookings for selected house that already booked in choice
     file = fopen("Booking_history.csv", "r");
     if (!file) {
         printf(RED_COLOR "Error reopening booking history.\n" RESET_COLOR);
@@ -1312,7 +1399,7 @@ void manager_view_bookings_for_house() {
         return;
     }
 
-    fgets(line, sizeof(line), file); // skip header
+    fgets(line, sizeof(line), file);
     int found = 0;
     while (fgets(line, sizeof(line), file)) {
         char fullname[100], phone[20], checkin[20], checkout[20], code[10];
@@ -1341,7 +1428,7 @@ void manager_view_bookings_for_house() {
 }
 
 
-
+//manager accept booking function
 
 void manager_accept_booking() {
     if (booking_count == 0) {
@@ -1366,7 +1453,6 @@ void manager_accept_booking() {
         if (bookings[i].id == booking_id && strcmp(bookings[i].status, "Pending") == 0) {
             strcpy(bookings[i].status, "Accepted");
 
-            // Mark house as unavailable
             for (int j = 0; j < house_count; j++) {
                 if (strcmp(houses[j].code, bookings[i].house_code) == 0) {
                     houses[j].is_available = 0;
@@ -1381,14 +1467,19 @@ void manager_accept_booking() {
     printf(RED_COLOR "Booking not found or already processed.\n" RESET_COLOR);
 }
 
+//header ui
+
 void show_title() {
     printf("\n%s--------------------------------------------------\n", BLUE_COLOR);
     printf("              HOUSE BOOKING SYSTEM                \n");
     printf("--------------------------------------------------\n" RESET_COLOR);
 }
 
+//main  function for manager sync all other function in manager -_-
+
 void manager_menu() {
-    //load_properties_from_csv("Detail.csv");
+    load_houses_for_manager();
+    load_properties_from_csv("Detail.csv");  
 
     int choice;
     while (1) {
@@ -1448,6 +1539,8 @@ int is_valid_date(int day, int month, int year) {
 
     return day <= days_in_month[month - 1];
 }
+
+// main function booking !??!?!
 
 void customer_booking_page(const char *house_code) {
     clear_screen();
@@ -1677,6 +1770,8 @@ void customer_booking_page(const char *house_code) {
     getchar(); getchar();
 }
 
+//see house detail before select choice
+
 void customer_view_house_details(int house_index) {
     clear_screen();
 
@@ -1729,9 +1824,11 @@ void customer_view_house_details(int house_index) {
             return;
         default:
             printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
-            getchar(); getchar();  // Pause
+            getchar(); getchar();  
     }
 }
+
+//delete fav house
 
 void remove_favorite_by_index(int remove_index) {
     FILE *file = fopen("favorites.csv", "r");
@@ -1758,6 +1855,8 @@ void remove_favorite_by_index(int remove_index) {
     remove("favorites.csv");
     rename("temp_favorites.csv", "favorites.csv");
 }
+
+//save fav house function
 
 void customer_view_favorite_houses() {
     clear_screen();
@@ -1858,6 +1957,8 @@ void customer_view_favorite_houses() {
     getchar(); getchar();
 }
 
+//customer view all house function (see data in briefly not detail)
+
 void customer_view_all_houses() {
     clear_screen();
     if (house_count == 0) {
@@ -1868,7 +1969,6 @@ void customer_view_all_houses() {
         printf("========================\n" RESET_COLOR);
 
         for (int i = 0; i < house_count; i++) {
-            //int i = house_count;
             printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, i + 1);
             printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
             printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
@@ -1887,13 +1987,13 @@ void customer_view_all_houses() {
 
     if (selection == 0) {
         printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
-        getchar(); getchar();  // Pause
+        getchar(); getchar();  
         return;
     }
 
     if (selection < 1 || selection > house_count) {
         printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
-        getchar(); getchar();  // Pause
+        getchar(); getchar();  
         return;
     }
 
@@ -1901,139 +2001,189 @@ void customer_view_all_houses() {
     customer_view_all_houses();
 }
 
+//customer search
+
 void customer_search_by_location() {
     printf("%sFunction: Search\n" RESET_COLOR);
 }
 
+//lower case in customer
+
 void to_lowercase_str(char *str) {
     for (int i = 0; str[i]; i++) str[i] = tolower(str[i]);
 }
+
+//customer filter function
 
 void customer_filter_advanced() {
     clear_screen();
     if (house_count == 0) {
         printf(RED_COLOR "No houses available!\n" RESET_COLOR);
         printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
-        getchar();
-        getchar();
+        getchar(); getchar();
         return;
     }
 
-    char province[50], province_input[50];
-    float min_price, max_price;
-    float min_rating, max_rating;
-    int min_bedrooms, min_beds, min_bathrooms;
+    char province[50] = "";
+float min_price = -1, max_price = -1;
+float min_rating = -1, max_rating = -1;
+int min_bedrooms = -1, min_beds = -1, min_bathrooms = -1;
 
-    getchar(); // flush
-    printf(GREEN_COLOR "Enter province to search (leave blank to skip): " RESET_COLOR);
-    fgets(province_input, sizeof(province_input), stdin);
-    province_input[strcspn(province_input, "\n")] = 0;
-    strcpy(province, province_input);
-    to_lowercase_str(province);
+// province selection
+int province_choice = -1;
+while (province_choice < 0 || province_choice > 3) {
+    printf(GREEN_COLOR "Select province to filter:\n" RESET_COLOR);
+    printf("1. Huahin/Cha-am\n");
+    printf("2. Pattaya\n");
+    printf("3. Kanchanaburi\n");
+    printf("0. Skip province filter\n");
+    printf("Your choice: ");
+    scanf("%d", &province_choice);
+    flush_input();
 
+    if (province_choice == 1)
+        strcpy(province, "huahin/cha-am");
+    else if (province_choice == 2)
+        strcpy(province, "pattaya");
+    else if (province_choice == 3)
+        strcpy(province, "kanchanaburi");
+    else if (province_choice == 0)
+        province[0] = '\0';
+    else
+        printf(RED_COLOR "Invalid choice. Try again.\n" RESET_COLOR);
+}
+
+// price input
+while (1) {
     printf(GREEN_COLOR "Enter minimum price (or 0 to skip): " RESET_COLOR);
     scanf("%f", &min_price);
+    flush_input();
     printf(GREEN_COLOR "Enter maximum price (or 0 to skip): " RESET_COLOR);
     scanf("%f", &max_price);
+    flush_input();
+    if ((min_price > 0 && max_price > 0 && min_price > max_price)) {
+        printf(RED_COLOR "\nMinimum price cannot be greater than maximum price. Try again.\n" RESET_COLOR);
+    } else {
+        break;
+    }
+}
 
+while (1) {
     printf(GREEN_COLOR "Enter minimum rating (or 0 to skip): " RESET_COLOR);
     scanf("%f", &min_rating);
+    flush_input();
     printf(GREEN_COLOR "Enter maximum rating (or 0 to skip): " RESET_COLOR);
     scanf("%f", &max_rating);
-
-    printf(GREEN_COLOR "Enter minimum bedrooms (or 0 to skip): " RESET_COLOR);
-    scanf("%d", &min_bedrooms);
-    printf(GREEN_COLOR "Enter minimum beds (or 0 to skip): " RESET_COLOR);
-    scanf("%d", &min_beds);
-    printf(GREEN_COLOR "Enter minimum bathrooms (or 0 to skip): " RESET_COLOR);
-    scanf("%d", &min_bathrooms);
-    int matched_indexes[MAX_HOUSES];
-    int matched_count = 0;
-
-    for (int i = 0; i < house_count; i++) {
-        if (!houses[i].is_available) continue;
-
-        if (strlen(province) > 0) {
-            char house_province[50];
-            strcpy(house_province, houses[i].province);
-            to_lowercase_str(house_province);
-            if (strstr(house_province, province) == NULL)
-                continue;
-        }
-
-        if ((min_price > 0 && houses[i].price < min_price) ||
-            (max_price > 0 && houses[i].price > max_price))
-            continue;
-
-        if ((min_rating > 0 && houses[i].rating < min_rating) ||
-            (max_rating > 0 && houses[i].rating > max_rating))
-            continue;
-
-        if (min_bedrooms > 0 && houses[i].bedrooms < min_bedrooms)
-            continue;
-
-        if (min_beds > 0 && houses[i].beds < min_beds)
-            continue;
-
-        if (min_bathrooms > 0 && houses[i].bathrooms < min_bathrooms)
-            continue;
-
-        matched_indexes[matched_count++] = i;
+    flush_input();
+    if ((min_rating > 0 && max_rating > 0 && min_rating > max_rating) ||
+        (min_rating > 10 || max_rating > 10)) {
+        printf(RED_COLOR "\nInvalid rating range. Rating must be between 0 and 10.\n" RESET_COLOR);
+    } else {
+        break;
     }
-
-    if (matched_count == 0) {
-        printf(RED_COLOR "\nNo houses match your criteria.\n" RESET_COLOR);
-        printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    // Sort by price ascending
-    for (int i = 0; i < matched_count - 1; i++) {
-        for (int j = i + 1; j < matched_count; j++) {
-            if (houses[matched_indexes[i]].price > houses[matched_indexes[j]].price) {
-                int temp = matched_indexes[i];
-                matched_indexes[i] = matched_indexes[j];
-                matched_indexes[j] = temp;
-            }
-        }
-    }
-    
-    printf(BLUE_COLOR "\n========================\n");
-    printf("     FILTERED RESULTS    \n");
-    printf("========================\n" RESET_COLOR);
-
-    for (int k = 0; k < matched_count; k++) {
-        int i = matched_indexes[k];
-        printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, k + 1);
-        printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
-        printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
-        printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
-        printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", houses[i].rating);
-        printf(WHITE_COLOR "Bedrooms: " RESET_COLOR "%d\n", houses[i].bedrooms);
-        printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
-        printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
-        printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
-    }
-
-    int selection;
-    printf(YELLOW_COLOR "\nEnter the number of the house to view details (0 to cancel): " RESET_COLOR);
-    scanf("%d", &selection);
-
-    if (selection == 0) {
-        printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    if (selection < 1 || selection > matched_count) {
-        printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
-        getchar(); getchar();
-        return;
-    }
-
-    customer_view_house_details(matched_indexes[selection - 1]);
 }
+
+printf(GREEN_COLOR "Enter minimum bedrooms (or 0 to skip): " RESET_COLOR);
+scanf("%d", &min_bedrooms);
+flush_input();
+printf(GREEN_COLOR "Enter minimum beds (or 0 to skip): " RESET_COLOR);
+scanf("%d", &min_beds);
+flush_input();
+printf(GREEN_COLOR "Enter minimum bathrooms (or 0 to skip): " RESET_COLOR);
+scanf("%d", &min_bathrooms);
+flush_input();
+
+int matched_indexes[MAX_HOUSES];
+int matched_count = 0;
+
+for (int i = 0; i < house_count; i++) {
+    if (!houses[i].is_available) continue;
+
+    if (strlen(province) > 0) {
+        char house_province[50];
+        strcpy(house_province, houses[i].province);
+        to_lowercase_str(house_province);
+        if (strstr(house_province, province) == NULL)
+            continue;
+    }
+
+    if ((min_price > 0 && houses[i].price < min_price) ||
+        (max_price > 0 && houses[i].price > max_price))
+        continue;
+
+    if ((min_rating > 0 && houses[i].rating < min_rating) ||
+        (max_rating > 0 && houses[i].rating > max_rating))
+        continue;
+
+    if (min_bedrooms > 0 && houses[i].bedrooms < min_bedrooms)
+        continue;
+
+    if (min_beds > 0 && houses[i].beds < min_beds)
+        continue;
+
+    if (min_bathrooms > 0 && houses[i].bathrooms < min_bathrooms)
+        continue;
+
+    matched_indexes[matched_count++] = i;
+}
+
+if (matched_count == 0) {
+    printf(RED_COLOR "\nNo houses match your criteria.\n" RESET_COLOR);
+    printf(YELLOW_COLOR "\nPress Enter to return to menu..." RESET_COLOR);
+    getchar(); getchar();
+    return;
+}
+
+// Sort price
+for (int i = 0; i < matched_count - 1; i++) {
+    for (int j = i + 1; j < matched_count; j++) {
+        if (houses[matched_indexes[i]].price > houses[matched_indexes[j]].price) {
+            int temp = matched_indexes[i];
+            matched_indexes[i] = matched_indexes[j];
+            matched_indexes[j] = temp;
+        }
+    }
+}
+
+    //fiter result ui
+
+printf(BLUE_COLOR "\n========================\n");
+printf("     FILTERED RESULTS    \n");
+printf("========================\n" RESET_COLOR);
+
+for (int k = 0; k < matched_count; k++) {
+    int i = matched_indexes[k];
+    printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, k + 1);
+    printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
+    printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
+    printf(WHITE_COLOR "Price: " RESET_COLOR "%.2f\n", houses[i].price);
+    printf(WHITE_COLOR "Rating: " RESET_COLOR "%.1f\n", houses[i].rating);
+    printf(WHITE_COLOR "Bedrooms: " RESET_COLOR "%d\n", houses[i].bedrooms);
+    printf(WHITE_COLOR "Beds: " RESET_COLOR "%d\n", houses[i].beds);
+    printf(WHITE_COLOR "Bathrooms: " RESET_COLOR "%d\n", houses[i].bathrooms);
+    printf(WHITE_COLOR "Kitchens: " RESET_COLOR "%d\n", houses[i].kitchens);
+}
+
+int selection;
+printf(YELLOW_COLOR "\nEnter the number of the house to view details (0 to cancel): " RESET_COLOR);
+scanf("%d", &selection);
+
+if (selection == 0) {
+    printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
+    getchar(); getchar();
+    return;
+}
+
+if (selection < 1 || selection > matched_count) {
+    printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
+    getchar(); getchar();
+    return;
+}
+
+customer_view_house_details(matched_indexes[selection - 1]);
+}
+
+//booking function in customer features
 
 void customer_my_booking() {
     clear_screen();
@@ -2046,16 +2196,15 @@ void customer_my_booking() {
     }
 
     char line[512], name_input[100];
-    getchar(); // flush newline
+    getchar();
     printf(GREEN_COLOR "Enter your full name to check your booking: " RESET_COLOR);
     fgets(name_input, sizeof(name_input), stdin);
     name_input[strcspn(name_input, "\n")] = 0;
 
-    // Store matched bookings in arrays
     char bookings[50][512];
     int booking_count = 0;
 
-    fgets(line, sizeof(line), file); // Skip header
+    fgets(line, sizeof(line), file); 
 
     while (fgets(line, sizeof(line), file)) {
         char fullname[100];
@@ -2118,7 +2267,6 @@ void customer_my_booking() {
         return;
     }
 
-    // Parse and refund
     char fullname[100], phone[20], checkin[20], checkout[20];
     int guests, nights;
     char code[10], housename[100], province[50];
@@ -2139,7 +2287,7 @@ void customer_my_booking() {
     printf(YELLOW_COLOR "Are you sure you want to cancel this booking? (Y/N): " RESET_COLOR);
 
     char confirm;
-    getchar();  // flush newline
+    getchar(); 
     scanf("%c", &confirm);
 
     if (tolower(confirm) != 'y') {
@@ -2149,7 +2297,7 @@ void customer_my_booking() {
         return;
     }
 
-    // Save to Cancelled_bookings.csv
+    // save data into cancelled_bookings.csv
     FILE *cancel_file = fopen("Cancelled_bookings.csv", "a");
     if (!cancel_file) {
         printf(RED_COLOR "Failed to record cancellation.\n" RESET_COLOR);
@@ -2157,7 +2305,6 @@ void customer_my_booking() {
         return;
     }
 
-    // Add header if file is empty
     fseek(cancel_file, 0, SEEK_END);
     if (ftell(cancel_file) == 0) {
         fprintf(cancel_file, "Fullname,Phone,Guests,CheckIn,CheckOut,Nights,Code,Name,Province,Price,Rating,Refund\n");
@@ -2166,13 +2313,12 @@ void customer_my_booking() {
     fprintf(cancel_file, "%s,%.2f\n", bookings[choice - 1], refund);
     fclose(cancel_file);
 
-    // Remove the canceled booking from Booking_history.csv
     FILE *original = fopen("Booking_history.csv", "r");
     FILE *temp = fopen("temp_booking.csv", "w");
 
     if (original && temp) {
         char header[512];
-        fgets(header, sizeof(header), original);  // Read and write header
+        fgets(header, sizeof(header), original);
         fputs(header, temp);
 
         while (fgets(line, sizeof(line), original)) {
@@ -2184,7 +2330,6 @@ void customer_my_booking() {
         fclose(original);
         fclose(temp);
 
-        // Overwrite Booking_history.csv with updated content
         FILE *final = fopen("Booking_history.csv", "w");
         FILE *temp_read = fopen("temp_booking.csv", "r");
         if (final && temp_read) {
@@ -2197,7 +2342,7 @@ void customer_my_booking() {
 
         remove("temp_booking.csv");
     }
-// === Restore availability in Calendar.csv ===
+
 FILE *calendar = fopen("Calendar.csv", "r");
 FILE *calendar_temp = fopen("Calendar_temp.csv", "w");
 
@@ -2205,7 +2350,6 @@ if (calendar && calendar_temp) {
     char cal_line[256], cal_code[20], cal_date[20], cal_status[20];
     char current_date[11];
 
-    // Convert checkin and checkout from DD/MM/YYYY to time_t
     int d1, m1, y1, d2, m2, y2;
     sscanf(checkin, "%d/%d/%d", &d1, &m1, &y1);
     sscanf(checkout, "%d/%d/%d", &d2, &m2, &y2);
@@ -2216,7 +2360,7 @@ if (calendar && calendar_temp) {
     time_t checkin_time = mktime(&checkin_tm);
     time_t checkout_time = mktime(&checkout_tm);
 
-    fgets(cal_line, sizeof(cal_line), calendar);  // header
+    fgets(cal_line, sizeof(cal_line), calendar); 
     fputs(cal_line, calendar_temp);
 
     while (fgets(cal_line, sizeof(cal_line), calendar)) {
@@ -2252,6 +2396,8 @@ if (calendar && calendar_temp) {
     getchar(); getchar();
 }
 
+//customer menu function
+
 void customer_menu() {
     int choice;
     while (1) {
@@ -2278,8 +2424,9 @@ void customer_menu() {
     }
 }
 
+//main system to mae it run in int main
+
 void run_system() {
-    //load_houses_from_csv("Briefly_Info.csv");
     load_detailed_houses_from_csv("Detail.csv");
     printf("Now Im going to properties");
     load_properties_from_csv("Detail.csv");
@@ -2303,7 +2450,7 @@ void run_system() {
 
         switch (choice) {
             case 1:
-                load_houses_for_customer("Briefly_Info.csv");  // ✅ correct
+                load_houses_for_customer("Briefly_Info.csv"); 
                 load_detailed_houses_from_csv("Detail.csv");
                 customer_menu();
                 break;
@@ -2312,7 +2459,6 @@ void run_system() {
                 load_houses_for_manager();
                 load_calendar("Calendar.csv");
             
-                // 🔧 Auto-generate calendar for any house missing calendar entries
                 for (int i = 0; i < house_count; i++) {
                     int found = 0;
                     for (int j = 0; j < calendar_count; j++) {
@@ -2327,8 +2473,8 @@ void run_system() {
                     }
                 }
             
-                load_calendar("Calendar.csv");  // 🔁 Reload updated calendar
-                sync_house_availability_from_calendar();  // ✅ Update in-memory house availability
+                load_calendar("Calendar.csv");  //updated calendar again to make it up to now !!!
+                sync_house_availability_from_calendar();  // update house data from calendar
                 manager_menu();
                 break;
 
