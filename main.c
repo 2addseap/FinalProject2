@@ -28,8 +28,8 @@ void clear_screen() {
 
 typedef struct {
     char code[10];
-    char date[20];     // "YYYY-MM-DD"
-    char status[20];   // "Available", "Booked", "Unavailable"
+    char date[20];     
+    char status[20];   
 } CalendarEntry;
 
 CalendarEntry calendar[3000];  // enough for 100 houses × 30 days
@@ -1380,8 +1380,6 @@ void manager_view_bookings_for_house() {
 }
 
 
-
-
 void manager_accept_booking() {
     if (booking_count == 0) {
         printf(RED_COLOR "No pending bookings!\n" RESET_COLOR);
@@ -1405,7 +1403,6 @@ void manager_accept_booking() {
         if (bookings[i].id == booking_id && strcmp(bookings[i].status, "Pending") == 0) {
             strcpy(bookings[i].status, "Accepted");
 
-            // Mark house as unavailable
             for (int j = 0; j < house_count; j++) {
                 if (strcmp(houses[j].code, bookings[i].house_code) == 0) {
                     houses[j].is_available = 0;
@@ -1420,11 +1417,15 @@ void manager_accept_booking() {
     printf(RED_COLOR "Booking not found or already processed.\n" RESET_COLOR);
 }
 
+//header ui
+
 void show_title() {
     printf("\n%s--------------------------------------------------\n", BLUE_COLOR);
     printf("              HOUSE BOOKING SYSTEM                \n");
     printf("--------------------------------------------------\n" RESET_COLOR);
 }
+
+//main  function for manager sync all other function in manager -_-
 
 void manager_menu() {
     load_houses_for_manager();
@@ -1488,6 +1489,8 @@ int is_valid_date(int day, int month, int year) {
 
     return day <= days_in_month[month - 1];
 }
+
+// main function booking !??!?!
 
 void customer_booking_page(const char *house_code) {
     clear_screen();
@@ -1717,6 +1720,8 @@ void customer_booking_page(const char *house_code) {
     getchar(); getchar();
 }
 
+//see house detail before select choice
+
 void customer_view_house_details(int house_index) {
     clear_screen();
 
@@ -1769,9 +1774,11 @@ void customer_view_house_details(int house_index) {
             return;
         default:
             printf(RED_COLOR "Invalid choice!\n" RESET_COLOR);
-            getchar(); getchar();  // Pause
+            getchar(); getchar(); 
     }
 }
+
+//delete fav house
 
 void remove_favorite_by_index(int remove_index) {
     FILE *file = fopen("favorites.csv", "r");
@@ -1798,6 +1805,8 @@ void remove_favorite_by_index(int remove_index) {
     remove("favorites.csv");
     rename("temp_favorites.csv", "favorites.csv");
 }
+
+//save fav house function
 
 void customer_view_favorite_houses() {
     clear_screen();
@@ -1898,6 +1907,8 @@ void customer_view_favorite_houses() {
     getchar(); getchar();
 }
 
+//customer view all house function (see data in briefly not detail)
+
 void customer_view_all_houses() {
     clear_screen();
     if (house_count == 0) {
@@ -1908,7 +1919,6 @@ void customer_view_all_houses() {
         printf("========================\n" RESET_COLOR);
 
         for (int i = 0; i < house_count; i++) {
-            //int i = house_count;
             printf(YELLOW_COLOR "\nResult #%d\n" RESET_COLOR, i + 1);
             printf(WHITE_COLOR "Name: " RESET_COLOR "%s\n", houses[i].name);
             printf(WHITE_COLOR "Province: " RESET_COLOR "%s\n", houses[i].province);
@@ -1927,13 +1937,13 @@ void customer_view_all_houses() {
 
     if (selection == 0) {
         printf(GREEN_COLOR "Returning to menu.\n" RESET_COLOR);
-        getchar(); getchar();  // Pause
+        getchar(); getchar();  
         return;
     }
 
     if (selection < 1 || selection > house_count) {
         printf(RED_COLOR "Invalid selection!\n" RESET_COLOR);
-        getchar(); getchar();  // Pause
+        getchar(); getchar(); 
         return;
     }
 
@@ -1941,13 +1951,19 @@ void customer_view_all_houses() {
     customer_view_all_houses();
 }
 
+//customer search
+
 void customer_search_by_location() {
     printf("%sFunction: Search\n" RESET_COLOR);
 }
 
+//lower case in customer
+
 void to_lowercase_str(char *str) {
     for (int i = 0; str[i]; i++) str[i] = tolower(str[i]);
 }
+
+//customer filter function
 
 void customer_filter_advanced() {
     clear_screen();
@@ -1964,7 +1980,7 @@ void customer_filter_advanced() {
     float min_rating, max_rating;
     int min_bedrooms, min_beds, min_bathrooms;
 
-    getchar(); // flush
+    getchar();
     printf(GREEN_COLOR "Enter province to search (leave blank to skip): " RESET_COLOR);
     fgets(province_input, sizeof(province_input), stdin);
     province_input[strcspn(province_input, "\n")] = 0;
@@ -2028,7 +2044,7 @@ void customer_filter_advanced() {
         return;
     }
 
-    // Sort by price ascending
+    // Sort price
     for (int i = 0; i < matched_count - 1; i++) {
         for (int j = i + 1; j < matched_count; j++) {
             if (houses[matched_indexes[i]].price > houses[matched_indexes[j]].price) {
@@ -2039,6 +2055,8 @@ void customer_filter_advanced() {
         }
     }
     
+    //fiter result ui
+
     printf(BLUE_COLOR "\n========================\n");
     printf("     FILTERED RESULTS    \n");
     printf("========================\n" RESET_COLOR);
@@ -2086,16 +2104,15 @@ void customer_my_booking() {
     }
 
     char line[512], name_input[100];
-    getchar(); // flush newline
+    getchar();
     printf(GREEN_COLOR "Enter your full name to check your booking: " RESET_COLOR);
     fgets(name_input, sizeof(name_input), stdin);
     name_input[strcspn(name_input, "\n")] = 0;
 
-    // Store matched bookings in arrays
     char bookings[50][512];
     int booking_count = 0;
 
-    fgets(line, sizeof(line), file); // Skip header
+    fgets(line, sizeof(line), file);
 
     while (fgets(line, sizeof(line), file)) {
         char fullname[100];
@@ -2158,7 +2175,6 @@ void customer_my_booking() {
         return;
     }
 
-    // Parse and refund
     char fullname[100], phone[20], checkin[20], checkout[20];
     int guests, nights;
     char code[10], housename[100], province[50];
@@ -2179,7 +2195,7 @@ void customer_my_booking() {
     printf(YELLOW_COLOR "Are you sure you want to cancel this booking? (Y/N): " RESET_COLOR);
 
     char confirm;
-    getchar();  // flush newline
+    getchar();
     scanf("%c", &confirm);
 
     if (tolower(confirm) != 'y') {
@@ -2189,7 +2205,7 @@ void customer_my_booking() {
         return;
     }
 
-    // Save to Cancelled_bookings.csv
+    // save data into cancelled_bookings.csv
     FILE *cancel_file = fopen("Cancelled_bookings.csv", "a");
     if (!cancel_file) {
         printf(RED_COLOR "Failed to record cancellation.\n" RESET_COLOR);
@@ -2197,7 +2213,6 @@ void customer_my_booking() {
         return;
     }
 
-    // Add header if file is empty
     fseek(cancel_file, 0, SEEK_END);
     if (ftell(cancel_file) == 0) {
         fprintf(cancel_file, "Fullname,Phone,Guests,CheckIn,CheckOut,Nights,Code,Name,Province,Price,Rating,Refund\n");
@@ -2206,13 +2221,12 @@ void customer_my_booking() {
     fprintf(cancel_file, "%s,%.2f\n", bookings[choice - 1], refund);
     fclose(cancel_file);
 
-    // Remove the canceled booking from Booking_history.csv
     FILE *original = fopen("Booking_history.csv", "r");
     FILE *temp = fopen("temp_booking.csv", "w");
 
     if (original && temp) {
         char header[512];
-        fgets(header, sizeof(header), original);  // Read and write header
+        fgets(header, sizeof(header), original); 
         fputs(header, temp);
 
         while (fgets(line, sizeof(line), original)) {
@@ -2224,7 +2238,6 @@ void customer_my_booking() {
         fclose(original);
         fclose(temp);
 
-        // Overwrite Booking_history.csv with updated content
         FILE *final = fopen("Booking_history.csv", "w");
         FILE *temp_read = fopen("temp_booking.csv", "r");
         if (final && temp_read) {
@@ -2237,7 +2250,7 @@ void customer_my_booking() {
 
         remove("temp_booking.csv");
     }
-// === Restore availability in Calendar.csv ===
+
 FILE *calendar = fopen("Calendar.csv", "r");
 FILE *calendar_temp = fopen("Calendar_temp.csv", "w");
 
@@ -2245,7 +2258,6 @@ if (calendar && calendar_temp) {
     char cal_line[256], cal_code[20], cal_date[20], cal_status[20];
     char current_date[11];
 
-    // Convert checkin and checkout from DD/MM/YYYY to time_t
     int d1, m1, y1, d2, m2, y2;
     sscanf(checkin, "%d/%d/%d", &d1, &m1, &y1);
     sscanf(checkout, "%d/%d/%d", &d2, &m2, &y2);
@@ -2256,7 +2268,7 @@ if (calendar && calendar_temp) {
     time_t checkin_time = mktime(&checkin_tm);
     time_t checkout_time = mktime(&checkout_tm);
 
-    fgets(cal_line, sizeof(cal_line), calendar);  // header
+    fgets(cal_line, sizeof(cal_line), calendar);
     fputs(cal_line, calendar_temp);
 
     while (fgets(cal_line, sizeof(cal_line), calendar)) {
@@ -2292,6 +2304,8 @@ if (calendar && calendar_temp) {
     getchar(); getchar();
 }
 
+//customer menu function
+
 void customer_menu() {
     int choice;
     while (1) {
@@ -2318,8 +2332,9 @@ void customer_menu() {
     }
 }
 
+//main system to mae it run in int main
+
 void run_system() {
-    //load_houses_from_csv("Briefly_Info.csv");
     load_detailed_houses_from_csv("Detail.csv");
     printf("Now Im going to properties");
     load_properties_from_csv("Detail.csv");
@@ -2343,7 +2358,7 @@ void run_system() {
 
         switch (choice) {
             case 1:
-                load_houses_for_customer("Briefly_Info.csv");  // ✅ correct
+                load_houses_for_customer("Briefly_Info.csv");
                 load_detailed_houses_from_csv("Detail.csv");
                 customer_menu();
                 break;
@@ -2352,7 +2367,6 @@ void run_system() {
                 load_houses_for_manager();
                 load_calendar("Calendar.csv");
             
-                // 🔧 Auto-generate calendar for any house missing calendar entries
                 for (int i = 0; i < house_count; i++) {
                     int found = 0;
                     for (int j = 0; j < calendar_count; j++) {
@@ -2367,8 +2381,8 @@ void run_system() {
                     }
                 }
             
-                load_calendar("Calendar.csv");  // 🔁 Reload updated calendar
-                sync_house_availability_from_calendar();  // ✅ Update in-memory house availability
+                load_calendar("Calendar.csv");  //updated calendar again to make it up to now !!!
+                sync_house_availability_from_calendar();  // update house data from calendar
                 manager_menu();
                 break;
 
