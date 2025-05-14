@@ -2192,7 +2192,7 @@ while (1) {
 }
 
 while (1) {
-    printf(GREEN_COLOR "Enter minimum rating (0–10 or 0 to skip): " RESET_COLOR);
+    printf(GREEN_COLOR "Enter minimum rating (0-10 or 0 to skip): " RESET_COLOR);
     if (scanf("%f", &min_rating) != 1 || min_rating < 0 || min_rating > 10) {
         printf(RED_COLOR "Invalid rating. Must be between 0 and 10.\n" RESET_COLOR);
         flush_input();
@@ -2200,7 +2200,7 @@ while (1) {
     }
     flush_input();
 
-    printf(GREEN_COLOR "Enter maximum rating (0–10 or 0 to skip): " RESET_COLOR);
+    printf(GREEN_COLOR "Enter maximum rating (0-10 or 0 to skip): " RESET_COLOR);
     if (scanf("%f", &max_rating) != 1 || max_rating < 0 || max_rating > 10) {
         printf(RED_COLOR "Invalid rating. Must be between 0 and 10.\n" RESET_COLOR);
         flush_input();
