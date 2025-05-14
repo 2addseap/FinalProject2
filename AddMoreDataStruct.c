@@ -1246,22 +1246,31 @@ void display_calendar_grid(const char *house_code, int year, int month) {
     }
 
 
+    time_t now = time(NULL);
+struct tm today = *localtime(&now);
+struct tm end_date_tm = today;
+end_date_tm.tm_mday += 30;
+mktime(&end_date_tm);  // normalize
+
+time_t start_time = mktime(&today);
+time_t end_time = mktime(&end_date_tm);
     for (int day = 1; day <= total_days; day++) {
         char date_str[20];
         snprintf(date_str, sizeof(date_str), "%04d-%02d-%02d", year, month, day);
 
         char status_char = ' ';
         for (int i = 0; i < calendar_count; i++) {
-            if (strcmp(calendar[i].code, house_code) == 0 &&
-                strcmp(calendar[i].date, date_str) == 0) {
-                if (strcmp(calendar[i].status, "Available") == 0)
-                    status_char = 'A';
-                else if (strcmp(calendar[i].status, "Booked") == 0)
-                    status_char = 'B';
-                else
-                    status_char = 'X';
-                break;
-            }
+            char status_upper[20];
+            strcpy(status_upper, calendar[i].status);
+            to_uppercase(status_upper); 
+
+            if (strcmp(status_upper, "AVAILABLE") == 0)
+            status_char = 'A';
+            else if (strcmp(status_upper, "BOOKED") == 0)
+                status_char = 'B';
+            else
+                status_char = 'X';
+            
         }
 
         char cell[5];
